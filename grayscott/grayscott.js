@@ -22,6 +22,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
 
     var mRenderer;
     var mScene;
+    var mFinalScene;
     var mCamera;
     var mUniforms;
     var mColors;
@@ -32,7 +33,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
 
     var mTexture1, mTexture2, mTexture3;
     //var mGSMaterial, mStatMaterial, mScreenMaterial;
-    var mScreenQuad;
+    var mScreenQuad, mSphere;
 
     var mMinusOnes = new THREE.Vector2(-1, -1);
 
@@ -187,9 +188,18 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         mRenderer = new THREE.WebGLRenderer({canvas: canvas, preserveDrawingBuffer: true});
 
         mScene = new THREE.Scene();
-        mCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -10000, 10000);
+        mFinalScene = new THREE.Scene();
+
+        var ws = 0.5;
+        mCamera = new THREE.OrthographicCamera(-ws, ws, ws, -ws, -10000, 10000);
         mCamera.position.z = 100;
+        mFinalCamera = new THREE.OrthographicCamera(-ws, ws, ws, -ws, -10000, 10000);
+        mFinalCamera.position.z = 100;
+        /*mCamera = new THREE.PerspectiveCamera(30, width / height, -10000, 10000);
+        mCamera.target = new THREE.Vector3( 0, 0, 0 );
+        mCamera.position.z = 100;*/
         mScene.add(mCamera);
+        mFinalScene.add(mFinalCamera);
 
         mUniforms = {
             screenWidth: {type: "f", value: undefined},
@@ -227,15 +237,26 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         });
         mScreenMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
-            vertexShader: document.getElementById('standardVertexShader').textContent,
+            vertexShader: document.getElementById('displacementVertexShader').textContent,
             fragmentShader: document.getElementById('screenFragmentShader').textContent
         });
 
         fragmentShaderId = defaultFragmentShader;
 
-        var plane = new THREE.PlaneGeometry(1.0, 1.0);
-        mScreenQuad = new THREE.Mesh(plane, mScreenMaterial);
+        //var plane = new THREE.PlaneGeometry(1.0, 1.0);
+        //mScreenQuad = new THREE.Mesh(plane, mScreenMaterial);
+        //mScene.add(mScreenQuad);
+
+        mScreenQuad = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.0, 1.0),
+            mScreenMaterial
+        );
+        mSphere = new THREE.Mesh(
+            new THREE.IcosahedronGeometry( 0.5, 7 ),
+            mScreenMaterial
+        );
         mScene.add(mScreenQuad);
+        mFinalScene.add(mSphere);
 
         mColorsNeedUpdate = true;
         updateUniformsColors();
@@ -354,7 +375,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             updateUniformsColors();
 
         mScreenQuad.material = mScreenMaterial;
-        mRenderer.render(mScene, mCamera);
+        mRenderer.render(mFinalScene, mCamera);
 
         requestAnimationFrame(render);
     };
@@ -431,7 +452,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
 
     clean = function()
     {
-        mUniforms.brush.value = new THREE.Vector2(-10, -10);
         init_gl(canvas.clientWidth, canvas.clientHeight);
     };
 

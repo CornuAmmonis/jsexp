@@ -17,7 +17,20 @@
             void main()
             {
                 vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="displacementVertexShader">
+            varying vec2 vUv;
+            uniform sampler2D sSource;
+
+            void main()
+            {
+                vUv = uv;
+                vec3 sUv = texture2D(sSource, vUv).rgb;
+                float disp = 0.05 * sUv.b;
+                vec3 pos = position + normal * disp;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.1 );
             }
         </script>
         <script type="x-shader/x-fragment" id="gsFragmentShader">
