@@ -7,7 +7,7 @@
  * p.mneila at upm.es
  */
 var init, loadPreset, clean, snapshot, fullscreen, alertInvalidShareString, parseShareString, updateShareString, updateStatShader, loadGradientPreset;
-var mGSMaterial, mStatMaterial, mScreenMaterial;
+var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
 
 (function(){
 
@@ -30,9 +30,9 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
     var mLastTime = 0;
     var mStep = 0 >>> 0; // coerce to uint32
     var uiThree = 3 >>> 0;
+    var uiTwo = 2 >>> 0;
 
-    var mTexture1, mTexture2, mTexture3;
-    //var mGSMaterial, mStatMaterial, mScreenMaterial;
+    var mTexture1, mTexture2, mTexture3, mTexture4, mTexture5;
     var mScreenQuad, mSphere;
 
     var mMinusOnes = new THREE.Vector2(-1, -1);
@@ -206,6 +206,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             screenHeight: {type: "f", value: undefined},
             tSource: {type: "t", value: undefined},
             sSource: {type: "t", value: undefined},
+            gSource: {type: "t", value: undefined},
             delta: {type: "f", value: 1.0},
             curlf: {type: "f", value: curlf},
             fluxf: {type: "f", value: fluxf},
@@ -235,9 +236,14 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             vertexShader: document.getElementById('standardVertexShader').textContent,
             fragmentShader: document.getElementById(defaultFragmentShader).textContent
         });
+        mGeometryMaterial = new THREE.ShaderMaterial({
+            uniforms: mUniforms,
+            vertexShader: document.getElementById('standardVertexShader').textContent,
+            fragmentShader: document.getElementById('geometryFragmentShader').textContent
+        });
         mScreenMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
-            vertexShader: document.getElementById('displacementVertexShader').textContent,
+            vertexShader: document.getElementById('zNormXformVertexShader').textContent,
             fragmentShader: document.getElementById('screenFragmentShader').textContent
         });
 
@@ -248,7 +254,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         //mScene.add(mScreenQuad);
 
         mScreenQuad = new THREE.Mesh(
-            new THREE.PlaneGeometry(1.0, 1.0),
+            new THREE.PlaneGeometry(1.0, 1.0, 100, 100),
             mScreenMaterial
         );
         mSphere = new THREE.Mesh(
@@ -274,7 +280,20 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         document.ex.scene.value = 0;
         document.shader.scene.value = 0;
         document.gradient.scene.value = 0;
-    }
+    };
+
+    var getWrappedRenderTarget = function(width, height)
+    {
+        var tgt = new THREE.WebGLRenderTarget(width, height, {
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter,
+            format: THREE.RGBFormat,
+            type: THREE.FloatType});
+
+        tgt.wrapS = THREE.RepeatWrapping;
+        tgt.wrapT = THREE.RepeatWrapping;
+        return tgt;
+    };
 
     var resize = function(width, height)
     {
@@ -289,30 +308,16 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         mRenderer.setSize(canvasWidth, canvasHeight);
 
         // TODO: Possible memory leak?
-        mTexture1 = new THREE.WebGLRenderTarget(canvasWidth/2, canvasHeight/2, {
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter,
-            format: THREE.RGBFormat,
-            type: THREE.FloatType});
-        mTexture2 = new THREE.WebGLRenderTarget(canvasWidth/2, canvasHeight/2, {
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter,
-            format: THREE.RGBFormat,
-            type: THREE.FloatType});
-        mTexture3 = new THREE.WebGLRenderTarget(canvasWidth/2, canvasHeight/2, {
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter,
-            format: THREE.RGBFormat,
-            type: THREE.FloatType});
-        mTexture1.wrapS = THREE.RepeatWrapping;
-        mTexture1.wrapT = THREE.RepeatWrapping;
-        mTexture2.wrapS = THREE.RepeatWrapping;
-        mTexture2.wrapT = THREE.RepeatWrapping;
-        mTexture3.wrapS = THREE.RepeatWrapping;
-        mTexture3.wrapT = THREE.RepeatWrapping;
+        var tgtWidth = canvasWidth/2;
+        var tgtHeight = canvasHeight/2;
+        mTexture1 = getWrappedRenderTarget(tgtWidth, tgtHeight);
+        mTexture2 = getWrappedRenderTarget(tgtWidth, tgtHeight);
+        mTexture3 = getWrappedRenderTarget(tgtWidth, tgtHeight);
+        mTexture4 = getWrappedRenderTarget(tgtWidth, tgtHeight);
+        mTexture5 = getWrappedRenderTarget(tgtWidth, tgtHeight);
 
-        mUniforms.screenWidth.value = canvasWidth/2;
-        mUniforms.screenHeight.value = canvasHeight/2;
+        mUniforms.screenWidth.value = tgtWidth;
+        mUniforms.screenHeight.value = tgtHeight;
     };
 
     var render = function(time)
@@ -336,6 +341,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         {
 
             var pStep = mStep % uiThree;
+            var gStep = mStep % uiTwo;
 
             if (pStep == 0) {
                 mScreenQuad.material = mGSMaterial;
@@ -366,13 +372,26 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
                 mUniforms.sSource.value = mTexture3;
             }
 
+            if (gStep == 0) {
+                mUniforms.gSource.value = mTexture4;
+                mScreenQuad.material = mGeometryMaterial;
+                mRenderer.render(mScene, mCamera, mTexture5, true);
+                mUniforms.gSource.value = mTexture5;
+            } else {
+                mUniforms.gSource.value = mTexture5;
+                mScreenQuad.material = mGeometryMaterial;
+                mRenderer.render(mScene, mCamera, mTexture4, true);
+                mUniforms.gSource.value = mTexture4;
+            }
+
             mUniforms.brush.value = mMinusOnes;
 
             mStep++;
         }
 
-        if(mColorsNeedUpdate)
+        if (mColorsNeedUpdate) {
             updateUniformsColors();
+        }
 
         mScreenQuad.material = mScreenMaterial;
         mRenderer.render(mFinalScene, mCamera);

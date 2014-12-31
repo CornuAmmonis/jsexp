@@ -20,17 +20,82 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
         </script>
-        <script type="x-shader/x-vertex" id="displacementVertexShader">
+        <script type="x-shader/x-vertex" id="zNormXformVertexShader">
             varying vec2 vUv;
-            uniform sampler2D sSource;
+            uniform sampler2D gSource;
+
+
+            mat4 rotMat(in vec3 axis, in float angle)
+            {
+                float c = cos(angle);
+                float s = sin(angle);
+                float t = 1.0 - c;
+                float x = axis.r;
+                float y = axis.g;
+                float z = axis.b;
+                float tx = t * x;
+                float ty = t * y;
+                mat4 r = mat4(
+                    vec4(tx * x + c, tx * y - s * z, tx * z + s * y, 0),
+                    vec4(tx * y + s * z, ty * y + c, ty * z - s * x, 0),
+                    vec4(tx * z - s * y, ty * z + s * x, t * z * z + c, 0),
+                    vec4(0, 0, 0, 1)
+                );
+                return r;
+            }
+
+            vec3 crossZNorm(in vec3 v)
+            {
+                float d = length(v);
+                float x = - v.y / d;
+                float y = + v.x / d;
+                return normalize(vec3(x, y, 0));
+            }
+
+            float innerAngleZNorm(in vec3 v) {
+                return acos(v.z / length(v));
+            }
+
+            mat4 zNormRotMat(in vec3 v)
+            {
+                vec3 p = crossZNorm(v);
+                float a = innerAngleZNorm(v);
+                return rotMat(p, a);
+            }
 
             void main()
             {
                 vUv = uv;
-                vec3 sUv = texture2D(sSource, vUv).rgb;
-                float disp = 0.05 * sUv.b;
-                vec3 pos = position + normal * disp;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 1.1 );
+                vec3 gUv = texture2D(gSource, vUv).xyz;
+                mat4 zMatrix = zNormRotMat(normal);
+                vec4 pos = vec4(position, 1.0) + zMatrix * vec4(gUv, 1.0);
+                gl_Position = projectionMatrix * modelViewMatrix * pos;
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="displacementVertexShader">
+            varying vec2 vUv;
+            uniform sampler2D gSource;
+
+            void main()
+            {
+                vUv = uv;
+                float gUv = texture2D(gSource, vUv).z;
+                vec3 pos = position + normal * gUv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( pos, 2.0 );
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="geometryFragmentShader">
+            varying vec2 vUv;
+
+            uniform sampler2D gSource;
+            uniform sampler2D sSource;
+
+            void main()
+            {
+                vec3 gUv = texture2D(gSource, vUv).xyz;
+                vec3 sUv = texture2D(sSource, vUv).xyz;
+                float disp = gUv.z + 0.0001 * sUv.z;
+                gl_FragColor = vec4(0.0, 0.0, disp, 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="gsFragmentShader">
@@ -167,7 +232,7 @@
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
 
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(rv));
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
             }
         </script>
@@ -217,7 +282,7 @@
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
 
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(rv));
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
             }
         </script>
@@ -241,7 +306,7 @@
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
 
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(rv));
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
             }
         </script>
@@ -284,7 +349,7 @@
 
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(rv));
 
                 vec3 avg = (uv_n + uv_e + uv_s + uv_w + uv_nw + uv_sw + uv_ne + uv_se + vec3(ra, rv, norm)) / 9.0;
 
@@ -301,7 +366,7 @@
             void main()
             {
                 vec3 uv = normalize(texture2D(tSource, vUv).rgb);
-                float p = 0.5 + sign(uv.r) * uv.g * uv.r;
+                float p = sign(uv.r) * uv.g * uv.r;
                 gl_FragColor = vec4(0.0, 0.0, p, 1.0);
             }
         </script>
@@ -351,7 +416,7 @@
 
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(rv));
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
 
             }
@@ -401,7 +466,7 @@
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
 
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(rv));
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
             }
         </script>
@@ -424,7 +489,7 @@
             
             void main()
             {
-                float value = texture2D(sSource, vUv).b;
+                float value = texture2D(sSource, vUv).b + 0.5;
 
                 float a;
                 vec3 col;
