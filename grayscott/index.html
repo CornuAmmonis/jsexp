@@ -87,15 +87,48 @@
         <script type="x-shader/x-fragment" id="geometryFragmentShader">
             varying vec2 vUv;
 
+            uniform float screenWidth;
+            uniform float screenHeight;
+
             uniform sampler2D gSource;
             uniform sampler2D sSource;
 
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+            vec3 n  = vec3(0.0, step_y, 0.0);
+            vec3 e  = vec3(step_x, 0.0, 0.0);
+            vec3 s  = vec3(0.0, -step_y, 0.0);
+            vec3 w  = vec3(-step_x, 0.0, 0.0);
+
+            vec3 surfaceNormal(vec3 c, vec3 v0, vec3 v1) 
+            {
+                vec3 ca = v0 - c;
+                vec3 cb = v1 - c;
+                return normalize(cross(ca, cb));
+            }
+
+            // should actually have a correction for the target mesh normals
+            // but that would generally be small
+            vec3 avgSurfaceNormal(vec3 vc, vec3 vn, vec3 ve, vec3 vs, vec3 vw)
+            {
+                vec3 n0 = surfaceNormal(vc, vn + n, ve + e);
+                vec3 n1 = surfaceNormal(vc, ve + e, vs + s);
+                vec3 n2 = surfaceNormal(vc, vs + s, vw + w);
+                vec3 n3 = surfaceNormal(vc, vw + w, vn + n);
+                return normalize(n0 + n1 + n2 + n3);
+            }
+
             void main()
             {
+                vec3 gUv_n = texture2D(gSource, vUv+n.xy).xyz;
+                vec3 gUv_e = texture2D(gSource, vUv+e.xy).xyz;
+                vec3 gUv_s = texture2D(gSource, vUv+s.xy).xyz;
+                vec3 gUv_w = texture2D(gSource, vUv+w.xy).xyz;
                 vec3 gUv = texture2D(gSource, vUv).xyz;
+                vec3 an = avgSurfaceNormal(gUv, gUv_n, gUv_e, gUv_s, gUv_w);
                 vec3 sUv = texture2D(sSource, vUv).xyz;
-                float disp = gUv.z + 0.0001 * sUv.z;
-                gl_FragColor = vec4(0.0, 0.0, disp, 1.0);
+                vec3 disp = gUv + 0.0001 * an * sUv.z;
+                gl_FragColor = vec4(disp, 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="gsFragmentShader">
