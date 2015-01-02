@@ -195,9 +195,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
         mCamera.position.z = 100;
         mFinalCamera = new THREE.OrthographicCamera(-ws, ws, ws, -ws, -10000, 10000);
         mFinalCamera.position.z = 100;
-        /*mCamera = new THREE.PerspectiveCamera(30, width / height, -10000, 10000);
-        mCamera.target = new THREE.Vector3( 0, 0, 0 );
-        mCamera.position.z = 100;*/
         mScene.add(mCamera);
         mFinalScene.add(mFinalCamera);
 
@@ -246,6 +243,10 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             vertexShader: document.getElementById('zNormXformVertexShader').textContent,
             fragmentShader: document.getElementById('screenFragmentShader').textContent
         });
+        mScreenMaterial.transparent = true;
+        mScreenMaterial.depthTest = false;
+        mScreenMaterial.side = THREE.DoubleSide;
+        mScreenMaterial.blending = THREE.NormalBlending;
 
         fragmentShaderId = defaultFragmentShader;
 
