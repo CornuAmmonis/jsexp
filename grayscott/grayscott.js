@@ -226,7 +226,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
         mGSMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
             vertexShader: document.getElementById('standardVertexShader').textContent,
-            fragmentShader: document.getElementById('gsFragmentShader').textContent
+            fragmentShader: document.getElementById('ginzbergLandauFragmentShader').textContent
         });
         mStatMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,

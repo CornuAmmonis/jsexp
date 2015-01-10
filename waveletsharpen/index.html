@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Smoke</title>
+        <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
+        <link rel="stylesheet" type="text/css" href="../gradientui/gradientui.css"/>
+        <link type="text/css" href="../3rd/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" />
+        <script type="text/javascript" src="../3rd/jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="../3rd/jquery-ui-1.8.16.custom.min.js"></script>
+        <script type="text/javascript" src="../3rd/colorPicker.js"></script>
+        <script type="text/javascript" src="../3rd/three.min.js"></script>
+        <script type="text/javascript" src="../gradientui/gradientui.js"></script>
+        <!--script type="text/javascript" src="http://mrdoob.github.com/three.js/build/three.min.js"></script-->
+        <script type="x-shader/x-vertex" id="standardVertexShader">
+            varying vec2 vUv;
+
+            void main()
+            {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="waveletSharpenFragmentShader">
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            uniform sampler2D sSource;
+            uniform sampler2D iSource;
+
+            uniform int hpass;
+            uniform int lpass;
+            uniform int level;
+            uniform int state;
+            uniform float amount;
+            uniform float radius;
+
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+
+            vec2 n  = vec2(0.0, step_y);
+            vec2 e  = vec2(step_x, 0.0);
+            vec2 s  = vec2(0.0, -step_y);
+            vec2 w  = vec2(-step_x, 0.0);
+            vec2 ne = vec2(step_x, step_y);
+            vec2 se = vec2(step_x, -step_y);
+            vec2 sw = vec2(-step_x, -step_y);
+            vec2 nw = vec2(-step_x, step_y);
+
+            const float p = 0.0625;
+
+
+            float hat_transform (sampler2D src, int ch, float sc)
+            {
+                if (ch == 0) {
+                    return  p * (4.0 * texture2D(src, vUv).x +
+                            2.0 * texture2D(src, vUv + sc * n).x +
+                            2.0 * texture2D(src, vUv + sc * e).x +
+                            2.0 * texture2D(src, vUv + sc * s).x +
+                            2.0 * texture2D(src, vUv + sc * w).x +
+                            texture2D(src, vUv + sc * ne).x +
+                            texture2D(src, vUv + sc * se).x +
+                            texture2D(src, vUv + sc * sw).x +
+                            texture2D(src, vUv + sc * nw).x);
+                } else if (ch == 1) {
+                    return  p * (4.0 * texture2D(src, vUv).y +
+                            2.0 * texture2D(src, vUv + sc * n).y +
+                            2.0 * texture2D(src, vUv + sc * e).y +
+                            2.0 * texture2D(src, vUv + sc * s).y +
+                            2.0 * texture2D(src, vUv + sc * w).y +
+                            texture2D(src, vUv + sc * ne).y +
+                            texture2D(src, vUv + sc * se).y +
+                            texture2D(src, vUv + sc * sw).y +
+                            texture2D(src, vUv + sc * nw).y);
+                } else {
+                    return  p * (4.0 * texture2D(src, vUv).z +
+                            2.0 * texture2D(src, vUv + sc * n).z +
+                            2.0 * texture2D(src, vUv + sc * e).z +
+                            2.0 * texture2D(src, vUv + sc * s).z +
+                            2.0 * texture2D(src, vUv + sc * w).z +
+                            texture2D(src, vUv + sc * ne).z +
+                            texture2D(src, vUv + sc * se).z +
+                            texture2D(src, vUv + sc * sw).z +
+                            texture2D(src, vUv + sc * nw).z);
+                }      
+            }
+
+            float get_component (sampler2D src, int ch)
+            {
+                if (ch == 0) {
+                    return texture2D(src, vUv).x;
+                } else if (ch == 1) {  
+                    return texture2D(src, vUv).y;
+                } else {  
+                    return texture2D(src, vUv).z;
+                }
+            }
+
+            vec3 swiz (float src, float hp, float lp, int ch) 
+            {
+                if (ch == 0) {
+                    return vec3(hp, lp, 0.0);
+                } else if (ch == 1) {
+                    return vec3(src, hp, lp);
+                } else {
+                    return vec3(src, lp, hp);
+                }
+            }
+
+            float gaussian (float l, float a, float r) {
+                return a * exp (- (l - r) * (l - r) / 1.5) + 1.0;
+            }
+
+            void main()
+            {
+                float lp, hp, src = 0.0;
+                if (state == 0) {
+                    src = get_component(iSource, 0);
+                    lp = hat_transform(iSource, 0, pow(2.0, float(level)));
+                    hp = gaussian(float(level), amount, radius) * (get_component(iSource, 0) - lp);
+                    src += hp;
+                } else if (state == 1) {
+                    src = get_component(sSource, 0);
+                    lp = hat_transform(sSource, hpass, pow(2.0, float(level)));
+                    hp = gaussian(float(level), amount, radius) * (get_component(sSource, hpass) - lp);
+                    src += hp;
+                } else if (state == 2) {
+                    src = get_component(sSource, 0);
+                    lp = get_component(sSource, lpass);
+                    src += lp;
+                } else if (state == 3) {
+                    src = get_component(sSource, 0);
+                    hp = src;
+                    lp = src;
+                }
+
+                gl_FragColor = vec4(swiz(src, hp, lp, hpass), 1.0);
+            }
+        </script>
+        <script type="text/javascript" src="sharpen.js"></script>
+        <meta charset="UTF-8">
+        <script>
+            $(function()
+            {
+                load();
+            });
+        </script>
+    </head>
+    <body>
+        <header>
+            <h1>Wavelet Sharpen</h1>
+        </header>
+        <div id="simulation">
+        <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
+        <aside class="panel">
+            <section id="instructions">
+                <header><h4>Instructions</h4></header>
+                <ol>
+                    <li>Adjust the sharpen amount and radius.</li>
+                </ol>
+            </section>
+            <section id="controls">
+                <h4 class="unsafe">Settings</h4>
+                Radius:
+                <span class="remark" id="radius"></span><br/>
+                <div id="sld_radius" class="slider"></div>
+                
+                Amount:
+                <span class ="remark" id="amount"></span><br/>
+                <div id="sld_amount" class="slider"></div>
+            </section>
+        </aside>
+        </div>
+        <footer>
+                <div id="copyright">
+                    &copy;2014 <a href="https://twitter.com/cornusammonis">@cornusammonis</a>
+                    <a href="https://github.com/CornuAmmonis/jsexp">Github</a><br>
+                    <a id="notworking" href="#">Not working?</a>
+                </div>
+        </footer>
+        
+        <div id="requirement_dialog" title="Requirements">
+            <p>This simulation requires the GL extensions framebuffer_object and texture_float.
+            If you cannot see the simulation your system probably lacks at least one of these extensions.</p>
+            
+            <p>In Google Chrome, you can see the available GL extensions going to chrome://gpu.</p>
+        </div>
+    </body>
+</html>

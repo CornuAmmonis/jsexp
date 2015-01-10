@@ -99,6 +99,14 @@
             vec3 e  = vec3(step_x, 0.0, 0.0);
             vec3 s  = vec3(0.0, -step_y, 0.0);
             vec3 w  = vec3(-step_x, 0.0, 0.0);
+            vec3 ne = vec3(step_x, step_y, 0.0);
+            vec3 se = vec3(step_x, -step_y, 0.0);
+            vec3 sw = vec3(-step_x, -step_y, 0.0);
+            vec3 nw = vec3(-step_x, step_y, 0.0);
+
+            const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
+            const float el = 0.01;
+            const float gr = 0.001;
 
             vec3 surfaceNormal(in vec3 c, in vec3 v0, in vec3 v1) 
             {
@@ -115,7 +123,16 @@
                 vec3 n1 = surfaceNormal(vc, ve + e, vs + s);
                 vec3 n2 = surfaceNormal(vc, vs + s, vw + w);
                 vec3 n3 = surfaceNormal(vc, vw + w, vn + n);
-                return normalize(n0 + n1 + n2 + n3);
+                return n0 + n1 + n2 + n3;
+            }
+
+            vec3 avgSurfaceNormal2(in vec3 vc, in vec3 vne, in vec3 vse, in vec3 vsw, in vec3 vnw)
+            {
+                vec3 n0 = surfaceNormal(vc, vnw + nw, vne + ne);
+                vec3 n1 = surfaceNormal(vc, vne + ne, vse + se);
+                vec3 n2 = surfaceNormal(vc, vse + se, vsw + sw);
+                vec3 n3 = surfaceNormal(vc, vsw + sw, vnw + nw);
+                return n0 + n1 + n2 + n3;
             }
 
             vec3 elasticForce(in vec3 v0, in vec3 v1, in float k) 
@@ -128,7 +145,7 @@
                 return    elasticForce(vc, vn, k)
                         + elasticForce(vc, ve, k)
                         + elasticForce(vc, vs, k)
-                        + elasticForce(vc, vw, k);   
+                        + elasticForce(vc, vw, k);
             }
 
             void main()
@@ -137,12 +154,115 @@
                 vec3 gUv_e = texture2D(gSource, vUv+e.xy).xyz;
                 vec3 gUv_s = texture2D(gSource, vUv+s.xy).xyz;
                 vec3 gUv_w = texture2D(gSource, vUv+w.xy).xyz;
+                vec3 gUv_ne = texture2D(gSource, vUv+ne.xy).xyz;
+                vec3 gUv_se = texture2D(gSource, vUv+se.xy).xyz;
+                vec3 gUv_sw = texture2D(gSource, vUv+sw.xy).xyz;
+                vec3 gUv_nw = texture2D(gSource, vUv+nw.xy).xyz;
                 vec3 gUv = texture2D(gSource, vUv).xyz;
                 vec3 an = avgSurfaceNormal(gUv, gUv_n, gUv_e, gUv_s, gUv_w);
-                vec3 en = totalElasticForce(gUv, gUv_n, gUv_e, gUv_s, gUv_w, 0.01);
+                vec3 an2 = sq2 * avgSurfaceNormal2(gUv, gUv_ne, gUv_se, gUv_sw, gUv_nw);
+                vec3 en = totalElasticForce(gUv, gUv_n, gUv_e, gUv_s, gUv_w, el);
+                vec3 en2 = totalElasticForce(gUv, gUv_ne, gUv_se, gUv_sw, gUv_nw, el * sq2);
                 vec3 sUv = texture2D(sSource, vUv).xyz;
-                vec3 disp = gUv + 0.001 * an * sUv.z + en;
+                vec3 disp = gUv + gr * normalize(an + an2) * sUv.z + en + en2;
                 gl_FragColor = vec4(disp, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="ginzbergLandauFragmentShader">
+            const float _K0 = -20.0/6.0; // center weight
+            const float _K1 = 4.0/6.0; // edge-neighbors
+            const float _K2 = 1.0/6.0; // vertex-neighbors
+            const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
+            const float wds = 4.8284271; // 2.0 + 2.0 * sqrt(2.0);
+
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform float delta;
+            uniform float curlf;
+            uniform float fluxf;
+            uniform float divf;
+            uniform float lapf;
+            uniform float feedf;
+            uniform float expf;
+            uniform vec2 brush;
+
+            const float ts = 0.200000;
+            const float alpha = 0.062500;
+            const float beta = 1.000000;
+            const float del = 1.000000;
+            const float gamma = 0.062500;
+            const float D_a = 0.200000;
+            const float D_b = 0.200000;
+            
+            vec2 texel = vec2(1.0/screenWidth, 1.0/screenHeight);
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+            vec2 n  = vec2(0.0, step_y);
+            vec2 ne = vec2(step_x, step_y);
+            vec2 e  = vec2(step_x, 0.0);
+            vec2 se = vec2(step_x, -step_y);
+            vec2 s  = vec2(0.0, -step_y);
+            vec2 sw = vec2(-step_x, -step_y);
+            vec2 w  = vec2(-step_x, 0.0);
+            vec2 nw = vec2(-step_x, step_y);
+
+            bool isnan(in float val)
+            {
+              return (val <= 0.0 || 0.0 <= val) ? false : true;
+            }
+
+            void main()
+            {
+                float cs = curlf;
+                float ws = fluxf;
+                float sp = expf;
+                float amp = feedf;
+                float lps = lapf;
+                float lps2 = divf;
+
+                if(brush.x < -5.0)
+                {
+                    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                    return;
+                }
+                
+                vec3 uv = texture2D(tSource, vUv).rgb;
+                vec3 uv_n = texture2D(tSource, vUv+n).rgb;
+                vec3 uv_e = texture2D(tSource, vUv+e).rgb;
+                vec3 uv_s = texture2D(tSource, vUv+s).rgb;
+                vec3 uv_w = texture2D(tSource, vUv+w).rgb;
+                vec3 uv_nw = texture2D(tSource, vUv+nw).rgb;
+                vec3 uv_sw = texture2D(tSource, vUv+sw).rgb;
+                vec3 uv_ne = texture2D(tSource, vUv+ne).rgb;
+                vec3 uv_se = texture2D(tSource, vUv+se).rgb;
+
+                vec3 lapl  = _K0*uv + _K1*(uv_n + uv_e + uv_w + uv_s) + _K2*(uv_nw + uv_sw + uv_ne + uv_se);
+                float a = uv.x;
+                float b = uv.y;
+                float delta_a = D_a * lapl.x + alpha*a - gamma*b + (-beta*a + del*b)*(a*a+b*b);
+                float delta_b = D_b * lapl.y + alpha*b + gamma*a + (-beta*b - del*a)*(a*a+b*b);
+                float ta = a + ts * delta_a;
+                float tb = b + ts * delta_b;
+                
+                if(brush.x > 0.0)
+                {
+                    vec2 diff = (vUv - brush)/texel;
+                    float dist = dot(diff, diff);
+                    if(dist < 5.0) {
+                        ta = 1.0;
+                        tb = 1.0;
+                    }
+                }
+
+                // hack
+                if (isnan(ta) || isnan(tb)) {
+                    ta = a;
+                    tb = b;
+                }
+                
+                gl_FragColor = vec4(ta, tb, 0.0, 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="gsFragmentShader">
@@ -513,7 +633,7 @@
                 float ra = tc * stat_uv.r + (1.0 - tc) * p;
                 float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
 
-                float norm = (p - ra)/(3.0 * sqrt(rv));
+                float norm = (p - ra)/(3.0 * sqrt(abs(rv) + 0.000001);
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
             }
         </script>
@@ -563,7 +683,7 @@
                     col = vec3(1.0, 0.0, 0.0);
                 }
                 
-            	gl_FragColor = vec4(vec3(col + normalize(disp)), 0.3);
+            	gl_FragColor = vec4(vec3(col + normalize(disp)), 1.0);
             }
         </script>
         <script type="text/javascript" src="grayscott.js"></script>
