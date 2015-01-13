@@ -1,5 +1,7 @@
 var init, load, loadPreset;
 
+var mWaveletSharpenMaterial, mScreenMaterial;
+
 /* State table
  hpass:  0 1 2 1 2 d d
  lpass:  1 2 1 2 1 1 d
@@ -27,7 +29,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     var mUniforms;
     var mStep = 0 >>> 0; // coerce to uint32
 
-    var mTexture1, mTexture2, iSource;
+    var mTexture0a, mTexture0b, mTexture1a, mTexture1b, mTexture2a, mTexture2b, iSource;
     var mScreenQuad;
 
     var presets = [
@@ -56,7 +58,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         init_uniforms();
         init_image(iSource);
         init_gl(canvas.clientWidth, canvas.clientHeight);
-        init_presets();
+        //init_presets();
 
     };
 
@@ -71,7 +73,9 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         mUniforms = {
             screenWidth: {type: "f", value: undefined},
             screenHeight: {type: "f", value: undefined},
-            sSource: {type: "t", value: undefined},
+            sSource0: {type: "t", value: undefined},
+            sSource1: {type: "t", value: undefined},
+            sSource2: {type: "t", value: undefined},
             iSource: {type: "t", value: undefined},
             amount: {type: "f", value: amount},
             radius: {type: "f", value: radius},
@@ -91,10 +95,15 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         mCamera.position.z = 100;
         mScene.add(mCamera);
 
-        var mWaveletSharpenMaterial = new THREE.ShaderMaterial({
+        mWaveletSharpenMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
             vertexShader: document.getElementById('standardVertexShader').textContent,
             fragmentShader: document.getElementById('waveletSharpenFragmentShader').textContent
+        });
+        mScreenMaterial = new THREE.ShaderMaterial({
+            uniforms: mUniforms,
+            vertexShader: document.getElementById('standardVertexShader').textContent,
+            fragmentShader: document.getElementById('screenFragmentShader').textContent
         });
 
         mScreenQuad = new THREE.Mesh(
@@ -123,7 +132,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         mUniforms.iSource.value = iSource;
     };
 
-    var getMirrorWrappedRenderTarget = function(width, height)
+    var getMirrorWrappedRenderTarget = function(width, height, attachmentNumber)
     {
         var tgt = new THREE.WebGLRenderTarget(width, height, {
             minFilter: THREE.LinearFilter,
@@ -133,6 +142,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
         tgt.wrapS = THREE.MirroredRepeatWrapping;
         tgt.wrapT = THREE.MirroredRepeatWrapping;
+        tgt.attachmentNumber = attachmentNumber;
         return tgt;
     };
 
@@ -150,8 +160,12 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
         var tgtWidth = canvasWidth;
         var tgtHeight = canvasHeight;
-        mTexture1 = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight);
-        mTexture2 = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight);
+        mTexture0a = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 0);
+        mTexture0b = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 0);
+        mTexture1a = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 1);
+        mTexture1b = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 1);
+        mTexture2a = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 2);
+        mTexture2b = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 2);
 
         mUniforms.screenWidth.value = tgtWidth;
         mUniforms.screenHeight.value = tgtHeight;
@@ -177,21 +191,28 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     {
         mUniforms.radius.value = radius;
         mUniforms.amount.value = amount;
+        mScreenQuad.material = mWaveletSharpenMaterial;
 
-        for(var i=0; i<10; ++i)
+        for(var i=0; i<maxStep; ++i)
         {
             updateUniforms(mStep);
 
             if (mStep % 2 == 0) {
-                mUniforms.sSource.value = mTexture1;
-                mRenderer.render(mScene, mCamera, mTexture2, true);
+                mUniforms.sSource0.value = mTexture0a;
+                mUniforms.sSource1.value = mTexture1a;
+                mUniforms.sSource2.value = mTexture2a;
+                mRenderer.render(mScene, mCamera, [mTexture0b, mTexture1b, mTexture2b] , true);
             } else if (mStep % 2 == 1) {
-                mUniforms.sSource.value = mTexture2;
-                mRenderer.render(mScene, mCamera, mTexture1, true);
+                mUniforms.sSource0.value = mTexture0b;
+                mUniforms.sSource1.value = mTexture1b;
+                mUniforms.sSource2.value = mTexture2b;
+                mRenderer.render(mScene, mCamera, [mTexture0a, mTexture1a, mTexture2a] , true);
             }
 
             mStep++;
         }
+
+        mScreenQuad.material = mScreenMaterial;
         mRenderer.render(mScene, mCamera);
         requestAnimationFrame(render);
     };

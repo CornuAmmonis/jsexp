@@ -8,7 +8,7 @@
         <script type="text/javascript" src="../3rd/jquery-1.6.2.min.js"></script>
         <script type="text/javascript" src="../3rd/jquery-ui-1.8.16.custom.min.js"></script>
         <script type="text/javascript" src="../3rd/colorPicker.js"></script>
-        <script type="text/javascript" src="../3rd/three.min.js"></script>
+        <script type="text/javascript" src="../3rd/three.js"></script>
         <script type="text/javascript" src="../gradientui/gradientui.js"></script>
         <!--script type="text/javascript" src="http://mrdoob.github.com/three.js/build/three.min.js"></script-->
         <script type="x-shader/x-vertex" id="standardVertexShader">
@@ -20,7 +20,26 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
         </script>
+        <script type="x-shader/x-vertex" id="screenFragmentShader">
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            uniform sampler2D sSource0;
+            uniform sampler2D sSource1;
+            uniform sampler2D sSource2;
+
+            void main()
+            {
+                float v0 = texture2D(sSource0, vUv).x;
+                float v1 = texture2D(sSource1, vUv).x;
+                float v2 = texture2D(sSource2, vUv).x;
+                gl_FragColor = vec4(v0, v1, v2, 1.0);
+            }
+        </script>
         <script type="x-shader/x-vertex" id="waveletSharpenFragmentShader">
+            #extension GL_EXT_draw_buffers : require
             varying vec2 vUv;
 
             uniform float screenWidth;
