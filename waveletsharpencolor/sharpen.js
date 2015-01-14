@@ -12,7 +12,7 @@ var mWaveletSharpenMaterial, mScreenMaterial;
 var maxStep = 10;
 var hpass_arr = [0, 1, 2, 1, 2, 1, 2, 1, 1, 1];
 var lpass_arr = [1, 2, 1, 2, 1, 2, 1, 2, 2, 2];
-var level_arr = [0, 1, 2, 3, 4, 5, 6, 7, 0, 0];
+var level_arr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0];
 var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
 (function(){

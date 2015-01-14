@@ -23515,7 +23515,24 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 			} else {
 
-				renderTarget.__webglFramebuffer = _gl.createFramebuffer();
+				if ( renderTarget.shareFrameBufferFrom ) {
+
+					if ( renderTarget.shareFrameBufferFrom.__webglFramebuffer === undefined ) {
+
+						var framebuffer = _gl.createFramebuffer();
+						renderTarget.__webglFramebuffer = framebuffer;
+						renderTarget.shareFrameBufferFrom.__webglFramebuffer = framebuffer;
+
+					} else {
+
+						renderTarget.__webglFramebuffer = renderTarget.shareFrameBufferFrom.__webglFramebuffer;
+
+					}
+				} else {
+
+					renderTarget.__webglFramebuffer = _gl.createFramebuffer();
+					
+				}
 
 				if ( renderTarget.shareDepthFrom ) {
 
@@ -23673,6 +23690,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 						renderTargets.forEach( function( renderTarget ){
 
+							renderTarget.shareFrameBufferFrom = renderTargets[0];
 							_this.setRenderTarget( renderTarget );
 
 						});
@@ -23958,6 +23976,7 @@ THREE.WebGLRenderTarget = function ( width, height, options ) {
 	this.shareDepthFrom = null;
 
 	this.attachmentNumber = null;
+	this.shareFrameBufferFrom = null;
 
 };
 
