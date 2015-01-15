@@ -20,7 +20,29 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
         </script>
-        <script type="x-shader/x-vertex" id="screenFragmentShader">
+        <script type="x-shader/x-vertex" id="colorSpaceXformInputFragmentShader">
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            uniform sampler2D iSource;
+
+            vec3 rgb2ycbcr (vec3 v)
+            {
+                float y = 0.2990 * v.r + 0.5870 * v.g + 0.1140 * v.b;
+                float cb = -0.1687 * v.r - 0.3313 * v.g + 0.5000 * v.b + 0.5;
+                float cr = 0.5000 * v.r - 0.4187 * v.g - 0.0813 * v.b + 0.5;
+                return vec3(y, cb, cr);
+            }
+
+            void main()
+            {
+                vec3 v = texture2D(iSource, vUv).xyz;
+                gl_FragColor = vec4(rgb2ycbcr(v), 1.0);
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="colorSpaceXformOutputFragmentShader">
             varying vec2 vUv;
 
             uniform float screenWidth;
@@ -30,12 +52,23 @@
             uniform sampler2D sSource1;
             uniform sampler2D sSource2;
 
+            vec3 ycbcr2rgb (vec3 v)
+            {
+                float y = v.x;
+                float cb = v.y;
+                float cr = v.z;
+                float r = y + 1.40200 * (cr - 0.5);
+                float g = y - 0.34414 * (cb - 0.5) - 0.71414 * (cr - 0.5);
+                float b = y + 1.77200 * (cb - 0.5);
+                return vec3(r, g, b);
+            }
+
             void main()
             {
                 float v0 = texture2D(sSource0, vUv).x;
                 float v1 = texture2D(sSource1, vUv).x;
                 float v2 = texture2D(sSource2, vUv).x;
-                gl_FragColor = vec4(v0, v1, v2, 1.0);
+                gl_FragColor = vec4(ycbcr2rgb(vec3(v0, v1, v2)), 1.0);
             }
         </script>
         <script type="x-shader/x-vertex" id="waveletSharpenFragmentShader">

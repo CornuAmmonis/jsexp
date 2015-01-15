@@ -1,6 +1,6 @@
 var init, load, loadPreset;
 
-var mWaveletSharpenMaterial, mScreenMaterial;
+var mWaveletSharpenMaterial, mScreenMaterial, mXformInputMaterial, mXformOutputMaterial;
 
 var enableLogging = true;
 
@@ -25,7 +25,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     var mUniforms;
     var mStep = 0 >>> 0; // coerce to uint32
 
-    var mTexture0a, mTexture0b, mTexture1a, mTexture1b, mTexture2a, mTexture2b, iSource;
+    var mTexture0a, mTexture0b, mTexture1a, mTexture1b, mTexture2a, mTexture2b, iSource, iSourcePre;
     var mScreenQuad;
 
     var presets = [
@@ -41,8 +41,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
     load = function()
     {
-        // https://commons.wikimedia.org/wiki/File:Adams_The_Tetons_and_the_Snake_River.jpg
-        iSource = THREE.ImageUtils.loadTexture('frog.jpg', THREE.UVMapping, function() {
+        iSourcePre = THREE.ImageUtils.loadTexture('frog.jpg', THREE.UVMapping, function() {
             init();
         })
     };
@@ -52,9 +51,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         init_canvas();
         init_controls();
         init_uniforms();
-        init_image(iSource);
         init_gl(canvas.clientWidth, canvas.clientHeight);
-        //init_presets();
 
     };
 
@@ -96,10 +93,17 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
             vertexShader: document.getElementById('standardVertexShader').textContent,
             fragmentShader: document.getElementById('waveletSharpenFragmentShader').textContent
         });
-        mScreenMaterial = new THREE.ShaderMaterial({
+
+        mXformInputMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
             vertexShader: document.getElementById('standardVertexShader').textContent,
-            fragmentShader: document.getElementById('screenFragmentShader').textContent
+            fragmentShader: document.getElementById('colorSpaceXformInputFragmentShader').textContent
+        });
+
+        mXformOutputMaterial = new THREE.ShaderMaterial({
+            uniforms: mUniforms,
+            vertexShader: document.getElementById('standardVertexShader').textContent,
+            fragmentShader: document.getElementById('colorSpaceXformOutputFragmentShader').textContent
         });
 
         mScreenQuad = new THREE.Mesh(
@@ -112,19 +116,6 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         resize(width, height);
 
         initRender();
-    };
-
-    var init_presets = function()
-    {
-        document.ex.scene.value = 0;
-    };
-
-    var init_image = function(iSource)
-    {
-        iSource.wrapS = THREE.MirroredRepeatWrapping;
-        iSource.wrapT = THREE.MirroredRepeatWrapping;
-        iSource.needsUpdate = true;
-        mUniforms.iSource.value = iSource;
     };
 
     var getMirrorWrappedRenderTarget = function(width, height, attachmentNumber)
@@ -155,6 +146,9 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
         var tgtWidth = canvasWidth;
         var tgtHeight = canvasHeight;
+
+        iSourcePre.needsUpdate = true;
+        iSource = getMirrorWrappedRenderTarget(width, height, null);
         mTexture0a = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 0);
         mTexture0b = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 0);
         mTexture1a = getMirrorWrappedRenderTarget(tgtWidth, tgtHeight, 1);
@@ -189,6 +183,11 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
      */
     var initRender = function()
     {
+        mScreenQuad.material = mXformInputMaterial;
+        mUniforms.iSource.value = iSourcePre;
+        mRenderer.render(mScene, mCamera, iSource, true);
+        mUniforms.iSource.value = iSource;
+
         mUniforms.radius.value = radius;
         mUniforms.amount.value = amount;
         mScreenQuad.material = mWaveletSharpenMaterial;
@@ -205,7 +204,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         mUniforms.sSource2.value = mTexture2b;
         mRenderer.render(mScene, mCamera, [mTexture0a, mTexture1a, mTexture2a], true);
 
-        mScreenQuad.material = mScreenMaterial;
+        mScreenQuad.material = mXformOutputMaterial;
         mRenderer.render(mScene, mCamera);
 
         requestAnimationFrame(render);
@@ -236,7 +235,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
         } else {
 
-            mScreenQuad.material = mScreenMaterial;
+            mScreenQuad.material = mXformOutputMaterial;
             mRenderer.render(mScene, mCamera);
 
         }
