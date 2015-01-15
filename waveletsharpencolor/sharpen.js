@@ -2,14 +2,10 @@ var init, load, loadPreset;
 
 var mWaveletSharpenMaterial, mScreenMaterial;
 
-/* State table
- hpass:  0 1 2 1 2 d d
- lpass:  1 2 1 2 1 1 d
- level:  0 1 2 3 4 d d
- state:  2 2 2 2 2 1 0
- */
+var enableLogging = true;
 
 var maxStep = 10;
+
 var hpass_arr = [0, 1, 2, 1, 2, 1, 2, 1, 1, 1];
 var lpass_arr = [1, 2, 1, 2, 1, 2, 1, 2, 2, 2];
 var level_arr = [1, 2, 3, 4, 5, 6, 7, 8, 0, 0];
@@ -46,7 +42,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     load = function()
     {
         // https://commons.wikimedia.org/wiki/File:Adams_The_Tetons_and_the_Snake_River.jpg
-        iSource = THREE.ImageUtils.loadTexture('tetons.jpg', THREE.UVMapping, function() {
+        iSource = THREE.ImageUtils.loadTexture('frog.jpg', THREE.UVMapping, function() {
             init();
         })
     };
@@ -115,8 +111,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
         resize(width, height);
 
-        render();
-        requestAnimationFrame(render);
+        initRender();
     };
 
     var init_presets = function()
@@ -178,7 +173,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         mUniforms.lpass.value = lpass_arr[pass];
         mUniforms.level.value = level_arr[pass];
         mUniforms.state.value = state_arr[pass];
-        if (step < maxStep) {
+        if (enableLogging && step < maxStep) {
             console.log(pass + " "
                     + hpass_arr[pass] + " "
                     + lpass_arr[pass] + " "
@@ -187,33 +182,65 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         }
     };
 
+    /*
+        On the first two calls to drawBuffersWEBGL it fails with the error:
+        WebGL: INVALID_VALUE: drawBuffersWEBGL: more than one buffer
+        So we run the two initial passes here as a workaround.
+     */
+    var initRender = function()
+    {
+        mUniforms.radius.value = radius;
+        mUniforms.amount.value = amount;
+        mScreenQuad.material = mWaveletSharpenMaterial;
+
+        updateUniforms(0);
+
+        mUniforms.sSource0.value = mTexture0a;
+        mUniforms.sSource1.value = mTexture1a;
+        mUniforms.sSource2.value = mTexture2a;
+        mRenderer.render(mScene, mCamera, [mTexture0b, mTexture1b, mTexture2b], true);
+
+        mUniforms.sSource0.value = mTexture0b;
+        mUniforms.sSource1.value = mTexture1b;
+        mUniforms.sSource2.value = mTexture2b;
+        mRenderer.render(mScene, mCamera, [mTexture0a, mTexture1a, mTexture2a], true);
+
+        mScreenQuad.material = mScreenMaterial;
+        mRenderer.render(mScene, mCamera);
+
+        requestAnimationFrame(render);
+    };
+
     var render = function()
     {
         mUniforms.radius.value = radius;
         mUniforms.amount.value = amount;
         mScreenQuad.material = mWaveletSharpenMaterial;
 
-        for(var i=0; i<maxStep; ++i)
-        {
+        if (mStep < maxStep) {
             updateUniforms(mStep);
 
             if (mStep % 2 == 0) {
                 mUniforms.sSource0.value = mTexture0a;
                 mUniforms.sSource1.value = mTexture1a;
                 mUniforms.sSource2.value = mTexture2a;
-                mRenderer.render(mScene, mCamera, [mTexture0b, mTexture1b, mTexture2b] , true);
+                mRenderer.render(mScene, mCamera, [mTexture0b, mTexture1b, mTexture2b], true);
             } else if (mStep % 2 == 1) {
                 mUniforms.sSource0.value = mTexture0b;
                 mUniforms.sSource1.value = mTexture1b;
                 mUniforms.sSource2.value = mTexture2b;
-                mRenderer.render(mScene, mCamera, [mTexture0a, mTexture1a, mTexture2a] , true);
+                mRenderer.render(mScene, mCamera, [mTexture0a, mTexture1a, mTexture2a], true);
             }
 
             mStep++;
+
+        } else {
+
+            mScreenQuad.material = mScreenMaterial;
+            mRenderer.render(mScene, mCamera);
+
         }
 
-        mScreenQuad.material = mScreenMaterial;
-        mRenderer.render(mScene, mCamera);
         requestAnimationFrame(render);
     };
 
