@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Smoke</title>
+        <title>Wavelet Sharpen</title>
         <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
         <link rel="stylesheet" type="text/css" href="../gradientui/gradientui.css"/>
         <link type="text/css" href="../3rd/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" />
         <script type="text/javascript" src="../3rd/jquery-1.6.2.min.js"></script>
         <script type="text/javascript" src="../3rd/jquery-ui-1.8.16.custom.min.js"></script>
         <script type="text/javascript" src="../3rd/colorPicker.js"></script>
-        <script type="text/javascript" src="../3rd/three.js"></script>
+        <script type="text/javascript" src="../3rd/three.min.js"></script>
         <script type="text/javascript" src="../gradientui/gradientui.js"></script>
-        <!--script type="text/javascript" src="http://mrdoob.github.com/three.js/build/three.min.js"></script-->
         <script type="x-shader/x-vertex" id="standardVertexShader">
             varying vec2 vUv;
 
@@ -241,7 +240,7 @@
         </div>
         <footer>
                 <div id="copyright">
-                    &copy;2014 <a href="https://twitter.com/cornusammonis">@cornusammonis</a>
+                    &copy;2015 <a href="https://twitter.com/cornusammonis">@cornusammonis</a>
                     <a href="https://github.com/CornuAmmonis/jsexp">Github</a><br>
                     Image: "<a href="https://commons.wikimedia.org/wiki/File:Rana_temporaria_in_nature_park_Trho%C5%88_in_2014_(2).jpg#mediaviewer/File:Rana_temporaria_in_nature_park_Trho%C5%88_in_2014_(2).jpg">Rana temporaria in nature park Trhoň in 2014 (2)</a>" by <a href="//commons.wikimedia.org/wiki/User:Chmee2" title="User:Chmee2">Chmee2</a> - Licensed under <a href="http://creativecommons.org/licenses/by/3.0" title="Creative Commons Attribution 3.0">CC BY 3.0</a> via <a href="//commons.wikimedia.org/wiki/">Wikimedia Commons</a>.<br>
                     <a id="notworking" href="#">Not working?</a>
@@ -249,7 +248,7 @@
         </footer>
         
         <div id="requirement_dialog" title="Requirements">
-            <p>This simulation requires the GL extensions framebuffer_object and texture_float.
+            <p>This simulation requires the WebGL extensions framebuffer_object, texture_float, and draw_buffers.
             If you cannot see the simulation your system probably lacks at least one of these extensions.</p>
             
             <p>In Google Chrome, you can see the available GL extensions going to chrome://gpu.</p>

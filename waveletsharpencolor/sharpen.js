@@ -1,8 +1,8 @@
 var init, load, loadPreset;
 
-var mWaveletSharpenMaterial, mScreenMaterial, mXformInputMaterial, mXformOutputMaterial;
+var mWaveletSharpenMaterial, mXformInputMaterial, mXformOutputMaterial;
 
-var enableLogging = true;
+var enableLogging = false;
 
 var maxStep = 10;
 
@@ -259,14 +259,14 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     var init_controls = function()
     {
         $("#sld_radius").slider({
-            value: radius, min: 0.0, max:5.0, step:0.01,
+            value: radius, min: 0.0, max:8.0, step:0.01,
             change: function(event, ui) {$("#radius").html(ui.value); radius = ui.value; mStep = 0;},
             slide: function(event, ui) {$("#radius").html(ui.value); radius = ui.value; mStep = 0;}
         });
         $("#sld_radius").slider("value", radius);
 
         $("#sld_amount").slider({
-            value: amount, min: 0.0, max:3.0, step:0.01,
+            value: amount, min: 0.0, max:10.0, step:0.01,
             change: function(event, ui) {$("#amount").html(ui.value); amount = ui.value; mStep = 0;},
             slide: function(event, ui) {$("#amount").html(ui.value); amount = ui.value; mStep = 0;}
         });
