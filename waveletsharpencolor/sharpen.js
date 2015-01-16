@@ -1,4 +1,4 @@
-var init, load, loadPreset;
+var init;
 
 var mWaveletSharpenMaterial, mXformInputMaterial, mXformOutputMaterial;
 
@@ -24,6 +24,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     var mCamera;
     var mUniforms;
     var mStep = 0 >>> 0; // coerce to uint32
+    var lumaOnly = 0 >>> 0;
 
     var mTexture0a, mTexture0b, mTexture1a, mTexture1b, mTexture2a, mTexture2b, iSource, iSourcePre;
     var mScreenQuad;
@@ -46,7 +47,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         })
     };
 
-    init = function()
+    var init = function()
     {
         init_canvas();
         init_controls();
@@ -75,7 +76,8 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
             hpass: {type: "i", value: undefined},
             lpass: {type: "i", value: undefined},
             level: {type: "i", value: undefined},
-            state: {type: "i", value: undefined}
+            state: {type: "i", value: undefined},
+            lumaOnly: {type: "i", value: 0}
         };
     };
 
@@ -163,6 +165,9 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
     var updateUniforms = function(step)
     {
         var pass = Math.min(step, maxStep - 1);
+        mUniforms.radius.value = radius;
+        mUniforms.amount.value = amount;
+        mUniforms.lumaOnly.value = lumaOnly;
         mUniforms.hpass.value = hpass_arr[pass];
         mUniforms.lpass.value = lpass_arr[pass];
         mUniforms.level.value = level_arr[pass];
@@ -176,6 +181,14 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         }
     };
 
+    var colorSpaceTransformRender = function()
+    {
+        mScreenQuad.material = mXformInputMaterial;
+        mUniforms.iSource.value = iSourcePre;
+        mRenderer.render(mScene, mCamera, iSource, true);
+        mUniforms.iSource.value = iSource;
+    };
+
     /*
         On the first two calls to drawBuffersWEBGL it fails with the error:
         WebGL: INVALID_VALUE: drawBuffersWEBGL: more than one buffer
@@ -183,13 +196,8 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
      */
     var initRender = function()
     {
-        mScreenQuad.material = mXformInputMaterial;
-        mUniforms.iSource.value = iSourcePre;
-        mRenderer.render(mScene, mCamera, iSource, true);
-        mUniforms.iSource.value = iSource;
+        colorSpaceTransformRender();
 
-        mUniforms.radius.value = radius;
-        mUniforms.amount.value = amount;
         mScreenQuad.material = mWaveletSharpenMaterial;
 
         updateUniforms(0);
@@ -212,8 +220,6 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
 
     var render = function()
     {
-        mUniforms.radius.value = radius;
-        mUniforms.amount.value = amount;
         mScreenQuad.material = mWaveletSharpenMaterial;
 
         if (mStep < maxStep) {
@@ -243,7 +249,7 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
         requestAnimationFrame(render);
     };
 
-    loadPreset = function(idx)
+    var loadPreset = function(idx)
     {
         amount = presets[idx].amount;
         radius = presets[idx].radius;
@@ -271,6 +277,12 @@ var state_arr = [0, 1, 1, 1, 1, 1, 1, 1, 2, 3];
             slide: function(event, ui) {$("#amount").html(ui.value); amount = ui.value; mStep = 0;}
         });
         $("#sld_amount").slider("value", amount);
+
+        $('#but_luma').buttonset();
+        $('#but_luma input[type=radio]').change(function() {
+            lumaOnly = this.value;
+            mStep = 0;
+        });
 
         $("#notworking").click(function(){
             $("#requirement_dialog").dialog("open");

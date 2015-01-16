@@ -82,6 +82,7 @@
             uniform sampler2D sSource2;
             uniform sampler2D iSource;
 
+            uniform int lumaOnly;
             uniform int hpass;
             uniform int lpass;
             uniform int level;
@@ -194,10 +195,16 @@
 
             void main()
             {
+                vec3 t0, t1, t2;
+                t0 = transform(sSource0, 0);
 
-                vec3 t0 = transform(sSource0, 0);
-                vec3 t1 = transform(sSource1, 1);
-                vec3 t2 = transform(sSource2, 2);
+                if (lumaOnly == 1) {
+                    t1 = vec3(get_component(iSource, 1));
+                    t2 = vec3(get_component(iSource, 2));
+                } else {
+                    t1 = transform(sSource1, 1);
+                    t2 = transform(sSource2, 2);
+                }
 
                 gl_FragData[0] = vec4(t0, 1.0);
                 gl_FragData[1] = vec4(t1, 1.0);
@@ -228,13 +235,22 @@
             </section>
             <section id="controls">
                 <h4 class="unsafe">Settings</h4>
+
                 Radius:
                 <span class="remark" id="radius"></span><br/>
                 <div id="sld_radius" class="slider"></div>
-                
+
                 Amount:
                 <span class ="remark" id="amount"></span><br/>
                 <div id="sld_amount" class="slider"></div>
+
+                Luminance-only:<br/><br/>
+                <span id="but_luma" class="buttonset">
+                    <input type="radio" id="but_luma_off" name="but_luma" value="0" checked="checked" />
+                    <label for="but_luma_off">Off</label>
+                    <input type="radio" id="but_luma_on" name="but_luma" value="1" />
+                    <label for="but_luma_on">On</label>
+                </span>
             </section>
         </aside>
         </div>
