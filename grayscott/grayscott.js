@@ -23,6 +23,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
     var mRenderer;
     var mScene;
     var mFinalScene;
+    var mMesh;
     var mCamera;
     var mUniforms;
     var mColors;
@@ -163,6 +164,40 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
     var fragmentShaderId = statShaders[0];
     var timesteps = 8;
 
+    function loadLeePerrySmith( callback ) {
+
+        var loader = new THREE.JSONLoader();
+
+        loader.load( 'LPS.js', function( geometry ) {
+
+            geometry.verticesNeedUpdate = true;
+            geometry.elementsNeedUpdate = true;
+            geometry.morphTargetsNeedUpdate = true;
+            geometry.uvsNeedUpdate = true;
+            geometry.normalsNeedUpdate = true;
+            geometry.colorsNeedUpdate = true;
+            geometry.tangentsNeedUpdate = true;
+
+            /*
+            var material = new THREE.MeshPhongMaterial( {
+                map: THREE.ImageUtils.loadTexture( 'obj/leeperrysmith/Map-COL.jpg' ),
+                specularMap: THREE.ImageUtils.loadTexture( 'obj/leeperrysmith/Map-SPEC.jpg' ),
+                normalMap: THREE.ImageUtils.loadTexture( 'obj/leeperrysmith/Infinite-Level_02_Tangent_SmoothUV.jpg' ),
+                shininess: 10
+            } );
+            */
+
+            mMesh = new THREE.Mesh( geometry, mScreenMaterial );
+            mFinalScene.add( mMesh );
+            mMesh.scale.set( 0.2, 0.2, 0.2 );
+
+            //scene.add( new THREE.FaceNormalsHelper( mesh, 1 ) );
+            //scene.add( new THREE.VertexNormalsHelper( mesh, 1 ) );
+
+        } );
+
+    }
+
     init = function()
     {
         init_canvas();
@@ -238,11 +273,13 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             vertexShader: document.getElementById('standardVertexShader').textContent,
             fragmentShader: document.getElementById('geometryFragmentShader').textContent
         });
+
         mScreenMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
             vertexShader: document.getElementById('zNormXformVertexShader').textContent,
             fragmentShader: document.getElementById('screenFragmentShader').textContent
         });
+
         mScreenMaterial.transparent = true;
         mScreenMaterial.depthTest = false;
         mScreenMaterial.side = THREE.DoubleSide;
@@ -263,8 +300,9 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             mScreenMaterial
         );
         mScene.add(mScreenQuad);
-        mFinalScene.add(mSphere);
+        //mFinalScene.add(mSphere);
 
+        loadLeePerrySmith();
         mColorsNeedUpdate = true;
         updateUniformsColors();
 
