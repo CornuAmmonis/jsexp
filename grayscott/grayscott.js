@@ -33,7 +33,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
     var uiThree = 3 >>> 0;
     var uiTwo = 2 >>> 0;
 
-    var mTexture1, mTexture2, mTexture3, mTexture4, mTexture5;
+    var mTexture1, mTexture2, mTexture3, mTexture4, mTexture5, mSkinTexture;
     var mScreenQuad, mSphere;
 
     var mMinusOnes = new THREE.Vector2(-1, -1);
@@ -161,6 +161,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
     var lapf = presets[0].lapf;
     var feedf = presets[0].feedf;
     var expf = presets[0].expf;
+    var displacementf = 0.002;
+    var elasticf = 0.04;
     var fragmentShaderId = statShaders[0];
     var timesteps = 8;
 
@@ -178,6 +180,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             geometry.colorsNeedUpdate = true;
             geometry.tangentsNeedUpdate = true;
 
+            mSkinTexture = THREE.ImageUtils.loadTexture("Map-COL.jpg");
+            mUniforms.iSource.value = mSkinTexture;
             /*
             var material = new THREE.MeshPhongMaterial( {
                 map: THREE.ImageUtils.loadTexture( 'obj/leeperrysmith/Map-COL.jpg' ),
@@ -239,6 +243,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             tSource: {type: "t", value: undefined},
             sSource: {type: "t", value: undefined},
             gSource: {type: "t", value: undefined},
+            iSource: {type: "t", value: undefined},
             delta: {type: "f", value: 1.0},
             curlf: {type: "f", value: curlf},
             fluxf: {type: "f", value: fluxf},
@@ -246,6 +251,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             lapf: {type: "f", value: lapf},
             feedf: {type: "f", value: feedf},
             expf: {type: "f", value: expf},
+            dispf: {type: "f", value: displacementf},
+            elf: {type: "f", value: elasticf},
             brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
             color1: {type: "v4", value: new THREE.Vector4(0, 0, 0, 0)},
             color2: {type: "v4", value: new THREE.Vector4(0, 1, 0, 0.25)},
@@ -277,13 +284,13 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
         mScreenMaterial = new THREE.ShaderMaterial({
             uniforms: mUniforms,
             vertexShader: document.getElementById('zNormXformVertexShader').textContent,
-            fragmentShader: document.getElementById('screenFragmentShader').textContent
+            fragmentShader: document.getElementById('skinFragmentShader').textContent
         });
 
-        mScreenMaterial.transparent = true;
-        mScreenMaterial.depthTest = false;
-        mScreenMaterial.side = THREE.DoubleSide;
-        mScreenMaterial.blending = THREE.NormalBlending;
+        //mScreenMaterial.transparent = true;
+        //mScreenMaterial.depthTest = false;
+        //mScreenMaterial.side = THREE.DoubleSide;
+        //mScreenMaterial.blending = THREE.NormalBlending;
 
         fragmentShaderId = defaultFragmentShader;
 
@@ -370,6 +377,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
         mUniforms.lapf.value = lapf;
         mUniforms.feedf.value = feedf;
         mUniforms.expf.value = expf;
+        mUniforms.dispf.value = displacementf;
+        mUniforms.elf.value = elasticf;
 
         // Let's play triple FBO ping pong
         // step:    1-2-3-4-5-6
@@ -476,7 +485,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
         });
         fragmentShaderId = shaderId;
         updateShareString();
-    }
+    };
 
     var onUpdatedColor = function()
     {
@@ -660,6 +669,20 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             slide: function(event, ui) {$("#exponent").html(ui.value); expf = ui.value; updateShareString();}
         });
         $("#sld_exponent").slider("value", expf);
+
+        $("#sld_elastic").slider({
+            value: elasticf, min: 0, max:0.1, step:0.0001,
+            change: function(event, ui) {$("#elastic").html(ui.value); elasticf = ui.value; updateShareString();},
+            slide: function(event, ui) {$("#elastic").html(ui.value); elasticf = ui.value; updateShareString();}
+        });
+        $("#sld_elastic").slider("value", elasticf);
+
+        $("#sld_displacement").slider({
+            value: displacementf, min: 0, max:0.01, step:0.00001,
+            change: function(event, ui) {$("#displacement").html(ui.value); displacementf = ui.value; updateShareString();},
+            slide: function(event, ui) {$("#displacement").html(ui.value); displacementf = ui.value; updateShareString();}
+        });
+        $("#sld_displacement").slider("value", displacementf);
 
         $("#sld_timesteps").slider({
             value: timesteps, min: 0, max:128, step:1.0,

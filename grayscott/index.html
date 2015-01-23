@@ -90,6 +90,9 @@
             uniform float screenWidth;
             uniform float screenHeight;
 
+            uniform float elf;
+            uniform float dispf;
+
             uniform sampler2D gSource;
             uniform sampler2D sSource;
 
@@ -139,9 +142,9 @@
                 vec3 gUv_w = texture2D(gSource, vUv+w.xy).xyz;
                 vec3 gUv = texture2D(gSource, vUv).xyz;
                 vec3 an = avgSurfaceNormal(gUv, gUv_n, gUv_e, gUv_s, gUv_w);
-                vec3 en = totalElasticForce(gUv, gUv_n, gUv_e, gUv_s, gUv_w, 0.01);
+                vec3 en = totalElasticForce(gUv, gUv_n, gUv_e, gUv_s, gUv_w, elf);
                 vec3 sUv = texture2D(sSource, vUv).xyz;
-                vec3 disp = gUv + 0.001 * an * sUv.z + en;
+                vec3 disp = gUv + dispf * an * sUv.z + en;
                 gl_FragColor = vec4(disp, 1.0);
             }
         </script>
@@ -517,6 +520,56 @@
                 gl_FragColor = vec4(ra, rv, norm, 1.0);
             }
         </script>
+        <script type="x-shader/x-fragment" id="skinFragmentShader">
+            const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
+
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform sampler2D sSource;
+            uniform sampler2D gSource;
+            uniform sampler2D iSource;
+            uniform float delta;
+            uniform float curlf;
+            uniform float fluxf;
+            uniform vec4 color1;
+            uniform vec4 color2;
+            uniform vec4 color3;
+            uniform vec4 color4;
+            uniform vec4 color5;
+
+            void main()
+            {
+                float value = texture2D(sSource, vUv).b + 0.5;
+                vec3 disp = texture2D(gSource, vUv).rgb;
+
+                float a;
+                vec3 col;
+
+                if (value <= color1.a) {
+                    col = color1.rgb;
+                } else if (value > color1.a && value <= color2.a) {
+                    a = (value - color1.a)/(color2.a - color1.a);
+                    col = mix(color1.rgb, color2.rgb, a);
+                } else if (value > color2.a && value <= color3.a) {
+                    a = (value - color2.a)/(color3.a - color2.a);
+                    col = mix(color2.rgb, color3.rgb, a);
+                } else if(value > color3.a && value <= color4.a) {
+                    a = (value - color3.a)/(color4.a - color3.a);
+                    col = mix(color3.rgb, color4.rgb, a);
+                } else if(value > color4.a && value <= color5.a) {
+                    a = (value - color4.a)/(color5.a - color4.a);
+                    col = mix(color4.rgb, color5.rgb, a);
+                } else if(value > color5.a) {
+                    col = color5.rgb;
+                } else {
+                    col = vec3(1.0, 0.0, 0.0);
+                }
+
+            	gl_FragColor = vec4(col * texture2D(iSource, vUv).rgb, 1.0);
+            }
+        </script>
         <script type="x-shader/x-fragment" id="screenFragmentShader">
             const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
 
@@ -526,6 +579,7 @@
             uniform sampler2D tSource;
             uniform sampler2D sSource;
             uniform sampler2D gSource;
+            uniform sampler2D iSource;
             uniform float delta;
             uniform float curlf;
             uniform float fluxf;
@@ -537,6 +591,7 @@
             
             void main()
             {
+                /*
                 float value = texture2D(sSource, vUv).b + 0.5;
                 vec3 disp = texture2D(gSource, vUv).rgb;
 
@@ -563,7 +618,10 @@
                     col = vec3(1.0, 0.0, 0.0);
                 }
                 
-            	gl_FragColor = vec4(vec3(col + normalize(disp)), 0.3);
+            	//gl_FragColor = vec4(vec3(col + normalize(disp)), 0.3);
+            	gl_FragColor = vec4(col, 1.0);
+            	*/
+            	gl_FragColor = vec4(texture2D(iSource, vUv).rgb, 1.0);
             }
         </script>
         <script type="text/javascript" src="grayscott.js"></script>
@@ -678,6 +736,14 @@
                 Curl exponent:
                 <span class ="remark" id="exponent"></span><br/>
                 <div id="sld_exponent" class="slider"></div>
+
+                Elastic force:
+                <span class ="remark" id="elastic"></span><br/>
+                <div id="sld_elastic" class="slider"></div>
+
+                Displacement scale:
+                <span class ="remark" id="displacement"></span><br/>
+                <div id="sld_displacement" class="slider"></div>
 
                 Timesteps per render:
                 <span class="remark" id="timesteps"></span><br/>
