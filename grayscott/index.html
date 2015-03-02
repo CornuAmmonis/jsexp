@@ -145,7 +145,7 @@
                 vec3 en = totalElasticForce(gUv, gUv_n, gUv_e, gUv_s, gUv_w, elf);
                 vec3 sUv = texture2D(sSource, vUv).xyz;
                 vec3 disp = gUv + dispf * an * sUv.z + en;
-                gl_FragColor = vec4(disp, 1.0);
+                gl_FragColor = vec4(disp, length(en));
             }
         </script>
         <script type="x-shader/x-fragment" id="gsFragmentShader">
@@ -159,6 +159,7 @@
             uniform float screenWidth;
             uniform float screenHeight;
             uniform sampler2D tSource;
+            uniform sampler2D gSource;
             uniform float delta;
             uniform float curlf;
             uniform float fluxf;
@@ -166,6 +167,7 @@
             uniform float lapf;
             uniform float feedf;
             uniform float expf;
+            uniform float geof;
             uniform vec2 brush;
             
             vec2 texel = vec2(1.0/screenWidth, 1.0/screenHeight);
@@ -211,14 +213,16 @@
                 vec3 uv_ne = texture2D(tSource, vUv+ne).rgb;
                 vec3 uv_se = texture2D(tSource, vUv+se).rgb;
 
+                float g_el = texture2D(gSource, vUv).a;
+
                 vec3 lapl  = _K0*uv + _K1*(uv_n + uv_e + uv_w + uv_s) + _K2*(uv_nw + uv_sw + uv_ne + uv_se);
                 float curl = (uv_n.r - uv_s.r - uv_e.g + uv_w.g + sq2 * (uv_nw.r + uv_nw.g) + sq2 * (uv_ne.r - uv_ne.g) + sq2 * (uv_sw.g - uv_sw.r) - sq2 * (uv_se.g + uv_se.r));
                 float curl_e = cs * sign(curl) * pow(abs(curl), sp);
                 vec2 flux  = vec2(uv_w.r + uv_e.r - wds * uv.r, uv_s.g + uv_n.g - wds * uv.g) + sq2 * (uv_nw.rg + uv_ne.rg + uv_se.rg + uv_sw.rg);
                 float div  = uv_s.g - uv_n.g - uv_e.r + uv_w.r + sq2 * (uv_nw.r - uv_nw.g) - sq2 * (uv_ne.r + uv_ne.g) + sq2 * (uv_sw.r + uv_sw.g) + sq2 * (uv_se.g - uv_se.r);
 
-                float ta = amp * uv.r + ws * flux.r - lps * sign(uv.r) * lapl.b + lps2 * sign(uv.r) * div;
-                float tb = amp * uv.g + ws * flux.g - lps * sign(uv.g) * lapl.b + lps2 * sign(uv.g) * div;
+                float ta = (amp * uv.r + ws * flux.r - lps * sign(uv.r) * lapl.b + lps2 * sign(uv.r) * div) * (1.0 + geof * g_el);
+                float tb = (amp * uv.g + ws * flux.g - lps * sign(uv.g) * lapl.b + lps2 * sign(uv.g) * div) * (1.0 + geof * g_el);
 
                 float a = ta * cos(curl_e) - tb * sin(curl_e);
                 float b = ta * sin(curl_e) + tb * cos(curl_e);
@@ -648,7 +652,7 @@
             <h1>Smoke Reaction-Diffusion</h1>
         </header>
         <div id="simulation">
-        <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
+        <canvas id="myCanvas" class="viewer" style="width:2048px;height:2048px"></canvas>
         <aside class="panel">
             <section id="instructions">
                 <header><h4>Instructions</h4></header>
@@ -744,6 +748,10 @@
                 Displacement scale:
                 <span class ="remark" id="displacement"></span><br/>
                 <div id="sld_displacement" class="slider"></div>
+
+                Geometry feed:
+                <span class ="remark" id="geometry"></span><br/>
+                <div id="sld_geometry" class="slider"></div>
 
                 Timesteps per render:
                 <span class="remark" id="timesteps"></span><br/>

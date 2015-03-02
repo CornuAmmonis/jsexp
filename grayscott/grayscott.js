@@ -162,6 +162,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
     var feedf = presets[0].feedf;
     var expf = presets[0].expf;
     var displacementf = 0.002;
+    var geometryf = 0.00;
     var elasticf = 0.04;
     var fragmentShaderId = statShaders[0];
     var timesteps = 8;
@@ -252,6 +253,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             feedf: {type: "f", value: feedf},
             expf: {type: "f", value: expf},
             dispf: {type: "f", value: displacementf},
+            geof: {type: "f", value: geometryf},
             elf: {type: "f", value: elasticf},
             brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
             color1: {type: "v4", value: new THREE.Vector4(0, 0, 0, 0)},
@@ -378,6 +380,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
         mUniforms.feedf.value = feedf;
         mUniforms.expf.value = expf;
         mUniforms.dispf.value = displacementf;
+        mUniforms.geof.value = geometryf;
         mUniforms.elf.value = elasticf;
 
         // Let's play triple FBO ping pong
@@ -683,6 +686,13 @@ var mGSMaterial, mStatMaterial, mScreenMaterial, mGeometryMaterial;
             slide: function(event, ui) {$("#displacement").html(ui.value); displacementf = ui.value; updateShareString();}
         });
         $("#sld_displacement").slider("value", displacementf);
+
+        $("#sld_geometry").slider({
+            value: geometryf, min: -0.05, max:0.05, step:0.0000001,
+            change: function(event, ui) {$("#geometry").html(ui.value); geometryf = ui.value; updateShareString();},
+            slide: function(event, ui) {$("#geometry").html(ui.value); geometryf = ui.value; updateShareString();}
+        });
+        $("#sld_geometry").slider("value", geometryf);
 
         $("#sld_timesteps").slider({
             value: timesteps, min: 0, max:128, step:1.0,
