@@ -20,6 +20,154 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
         </script>
+        <script type="x-shader/x-fragment" id="smoothlifeFragmentShader">
+            #define SQRT_2_PI 2.50662827463
+
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform vec2 brush;
+            vec2 texel = vec2(1.0/screenWidth, 1.0/screenHeight);
+
+            uniform float delta;
+            uniform float birth1;
+            uniform float birth2;
+            uniform float survival1;
+            uniform float survival2;
+            uniform float alpha_n;
+            uniform float alpha_m;
+
+            const float or = 24.0;         // outer radius
+            const float ir = 8.0;          // ratio of radii
+            const int oc = 60;             // outer gaussian cutoff
+            const int ic = 20;             // inner gaussian cutoff
+            const float dt = 0.01;
+
+            /* smoothglider (discrete time stepping 2D)
+            const float b1 = 0.278;        // birth1
+            const float b2 = 0.365;        // birth2
+            const float s1 = 0.267;        // survival1
+            const float s2 = 0.445;        // survival2
+
+            const float alpha_n = 0.028;   // sigmoid width for outer fullness
+            const float alpha_m = 0.147;   // sigmoid width for inner fullness
+            */
+
+            // the logistic function is used as a smooth step function
+            float sigma1(float x, float a, float alpha)
+            {
+                return 1.0 / ( 1.0 + exp( -(x-a)*4.0/alpha ) );
+            }
+
+            float sigma2(float x, float a, float b, float alpha)
+            {
+                return sigma1(x,a,alpha)
+                    * ( 1.0-sigma1(x,b,alpha) );
+            }
+
+            float sigma_m(float x, float y, float m, float alpha)
+            {
+                return x * ( 1.0 - sigma1(m, 0.5, alpha) )
+                    + y * sigma1(m, 0.5, alpha);
+            }
+
+            // the transition function
+            // (n = outer fullness, m = inner fullness)
+            float s(float n, float m, float b1, float b2, float s1, float s2, float alpha_n, float alpha_m)
+            {
+                return sigma2( n, sigma_m(b1, s1, m, alpha_m),
+                    sigma_m(b2, s2, m, alpha_m), alpha_n );
+            }
+
+            float gaussianOuterH(float sigma) {
+                float a = 1.0 / (sigma * SQRT_2_PI);
+                float d = 2.0 * sigma * sigma;
+                float acc = 0.0;
+
+                for (int i = -oc; i <= oc; i++) {
+                    float fi = float(i);
+                    float isq = - fi * fi;
+                    float g = a * exp( isq / d );
+                    vec2 offset = vec2(fi, 0.0) * texel;
+                    acc += g * texture2D(tSource, vUv+offset).y;
+                }
+
+                return acc;
+            }
+
+            float gaussianInnerH(float sigma) {
+                float a = 1.0 / (sigma * SQRT_2_PI);
+                float d = 2.0 * sigma * sigma;
+                float acc = 0.0;
+
+                for (int i = -ic; i <= ic; i++) {
+                    float fi = float(i);
+                    float isq = - fi * fi;
+                    float g = a * exp( isq / d );
+                    vec2 offset = vec2(fi, 0.0) * texel;
+                    acc += g * texture2D(tSource, vUv+offset).z;
+                }
+
+                return acc;
+            }
+
+            float gaussianOuterV(float sigma) {
+                float a = 1.0 / (sigma * SQRT_2_PI);
+                float d = 2.0 * sigma * sigma;
+                float acc = 0.0;
+
+                for (int i = -oc; i <= oc; i++) {
+                    float fi = float(i);
+                    float isq = - fi * fi;
+                    float g = a * exp( isq / d );
+                    vec2 offset = vec2(0.0, fi) * texel;
+                    acc += g * texture2D(tSource, vUv+offset).x;
+                }
+
+                return acc;
+            }
+
+            float gaussianInnerV(float sigma) {
+                float a = 1.0 / (sigma * SQRT_2_PI);
+                float d = 2.0 * sigma * sigma;
+                float acc = 0.0;
+
+                for (int i = -ic; i <= ic; i++) {
+                    float fi = float(i);
+                    float isq = - fi * fi;
+                    float g = a * exp( isq / d );
+                    vec2 offset = vec2(0.0, fi) * texel;
+                    acc += g * texture2D(tSource, vUv+offset).x;
+                }
+
+                return acc;
+            }
+
+            void main()
+            {
+                vec3 uv = texture2D(tSource, vUv).rgb;
+                float outPass1 = gaussianOuterV(or);
+                float inPass1  = gaussianInnerV(ir);
+
+                float outf = gaussianOuterH(or);
+                float inf  = gaussianInnerH(ir);
+
+                float result = 0.0;
+                if(brush.x > 0.0)
+                {
+                    vec2 diff = (vUv - brush)/texel;
+                    float dist = dot(diff, diff);
+                    if(dist < 300.0)
+                        result = 1.0;
+                }
+
+                result = clamp( result + uv.r + dt * (2.0 * s(2.0 * outf - inf,inf,birth1,birth2,survival1,survival2,alpha_n,alpha_m) -1.0), 0.0, 1.0 );
+
+                gl_FragColor = vec4(result, outPass1, inPass1, 1.0);
+
+            }
+        </script>
         <script type="x-shader/x-fragment" id="gsFragmentShader">
             const float _K0 = -20.0/6.0; // center weight
             const float _K1 = 4.0/6.0; // edge-neighbors
@@ -99,9 +247,8 @@
                 float div  = uv_s.g - uv_n.g - uv_e.r + uv_w.r + sq2 * (uv_nw.r - uv_nw.g) - sq2 * (uv_ne.r + uv_ne.g) + sq2 * (uv_sw.r + uv_sw.g) + sq2 * (uv_se.g - uv_se.r);
 
                 float theta, mag, cost, sint = 0.0;
-                const float fudge = 10000.0;
                 if (!(uv.r == 0.0 && uv.g == 0.0)) {
-                    theta = atan2(fudge * uv.g, fudge * uv.r);
+                    theta = atan2(uv.g, uv.r);
                     mag = sqrt(uv.r*uv.r + uv.g*uv.g);
                     cost = cos(theta);
                     sint = sin(theta);
@@ -240,17 +387,9 @@
 
             void main()
             {
-                vec3 stat_uv = texture2D(sSource, vUv).rgb;
-
                 vec3 uv = texture2D(tSource, vUv).rgb;
 
-                float p = distance(uv.rg, vec2(0.0, 0.0));
-
-                float ra = tc * stat_uv.r + (1.0 - tc) * p;
-                float rv = tc * stat_uv.g + (1.0 - tc) * (p - ra) * (p - ra);
-
-                float norm = 0.5 + (p - ra)/(3.0 * sqrt(rv));
-                gl_FragColor = vec4(ra, rv, norm, 1.0);
+                gl_FragColor = vec4(vec3(uv.r), 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="magnitudeGlobalNormFragmentShader">
