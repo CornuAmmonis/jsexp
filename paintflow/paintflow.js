@@ -1,12 +1,4 @@
-/* 
- * Gray-Scott
- *
- * A solver of the Gray-Scott model of reaction diffusion.
- *
- * ©2012 pmneila.
- * p.mneila at upm.es
- */
-var init, loadPreset, clean, snapshot, fullscreen, alertInvalidShareString, parseShareString, updateShareString, updateStatShader, loadGradientPreset;
+var init, loadPreset, clean, snapshot, fullscreen, alertInvalidShareString, parseShareString, updateShareString, mColor;
 var mGSMaterial, mStatMaterial, mScreenMaterial;
 
 (function(){
@@ -24,22 +16,15 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
     var mScene;
     var mCamera;
     var mUniforms;
-    var mColors;
     var mColorsNeedUpdate = true;
     var mLastTime = 0;
     var mStep = 0 >>> 0; // coerce to uint32
     var uiThree = 3 >>> 0;
 
     var mTexture1, mTexture2, mTexture3;
-    //var mGSMaterial, mStatMaterial, mScreenMaterial;
     var mScreenQuad;
 
     var mMinusOnes = new THREE.Vector2(-1, -1);
-
-    var gradient_presets = [
-        // Default
-        [0,"#000000",0.2,"#282532",0.5,"#7D7A8E",0.8,"#BCB9B9",1,"#EDEDED"]
-    ]
 
     var presets = [
         { // Default
@@ -134,12 +119,12 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
     var feedf = presets[0].feedf;
     var expf = presets[0].expf;
     var fragmentShaderId = statShaders[0];
-    var timesteps = 8;
+    var timesteps = 2;
 
     init = function()
     {
         init_canvas();
-        init_gradient();
+        init_color();
         init_controls();
         init_gl(canvas.clientWidth, canvas.clientHeight);
         init_presets();
@@ -161,8 +146,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         mRenderer = new THREE.WebGLRenderer({canvas: canvas, preserveDrawingBuffer: true});
 
         mScene = new THREE.Scene();
-        mCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -10000, 10000);
-        mCamera.position.z = 100;
+        mCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -1, 1);
+        mCamera.position.z = 0;
         mScene.add(mCamera);
 
         mUniforms = {
@@ -178,14 +163,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             feedf: {type: "f", value: feedf},
             expf: {type: "f", value: expf},
             brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
-            color1: {type: "v4", value: new THREE.Vector4(0, 0, 0, 0)},
-            color2: {type: "v4", value: new THREE.Vector4(0, 1, 0, 0.25)},
-            color3: {type: "v4", value: new THREE.Vector4(1, 1, 0, 0.5)},
-            color4: {type: "v4", value: new THREE.Vector4(1, 0, 0, 0.75)},
-            color5: {type: "v4", value: new THREE.Vector4(1, 1, 1, 0.1)}
+            color: {type: "v4", value: new THREE.Vector4(1, 1, 1, 0)}
         };
-        mColors = [mUniforms.color1, mUniforms.color2, mUniforms.color3, mUniforms.color4, mUniforms.color5];
-        $("#gradient").gradient("setUpdateCallback", onUpdatedColor);
 
         var defaultFragmentShader = statShaders[0];
 
@@ -212,7 +191,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         mScene.add(mScreenQuad);
 
         mColorsNeedUpdate = true;
-        updateUniformsColors();
 
         resize(width, height);
 
@@ -225,9 +203,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
     var init_presets = function()
     {
         document.ex.scene.value = 0;
-        document.shader.scene.value = 0;
-        document.gradient.scene.value = 0;
-    }
+    };
 
     var resize = function(width, height)
     {
@@ -239,20 +215,23 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         canvasWidth = canvasQ.width();
         canvasHeight = canvasQ.height();
 
+        var textureWidth = canvasWidth/2;
+        var textureHeight = canvasHeight/2;
+
         mRenderer.setSize(canvasWidth, canvasHeight);
 
         // TODO: Possible memory leak?
-        mTexture1 = new THREE.WebGLRenderTarget(canvasWidth/2, canvasHeight/2, {
+        mTexture1 = new THREE.WebGLRenderTarget(textureWidth, textureHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
             format: THREE.RGBFormat,
             type: THREE.FloatType});
-        mTexture2 = new THREE.WebGLRenderTarget(canvasWidth/2, canvasHeight/2, {
+        mTexture2 = new THREE.WebGLRenderTarget(textureWidth, textureHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
             format: THREE.RGBFormat,
             type: THREE.FloatType});
-        mTexture3 = new THREE.WebGLRenderTarget(canvasWidth/2, canvasHeight/2, {
+        mTexture3 = new THREE.WebGLRenderTarget(textureWidth, textureHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
             format: THREE.RGBFormat,
@@ -264,8 +243,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         mTexture3.wrapS = THREE.RepeatWrapping;
         mTexture3.wrapT = THREE.RepeatWrapping;
 
-        mUniforms.screenWidth.value = canvasWidth/2;
-        mUniforms.screenHeight.value = canvasHeight/2;
+        mUniforms.screenWidth.value = textureWidth;
+        mUniforms.screenHeight.value = textureHeight;
     };
 
     var render = function(time)
@@ -324,8 +303,10 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             mStep++;
         }
 
-        if(mColorsNeedUpdate)
-            updateUniformsColors();
+        if(mColorsNeedUpdate) {
+            mUniforms.color.value = new THREE.Vector4(mColor.r, mColor.g, mColor.b, 0.0);
+            mColorsNeedUpdate = false;
+        }
 
         mScreenQuad.material = mScreenMaterial;
         mRenderer.render(mScene, mCamera);
@@ -342,41 +323,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         feedf = presets[idx].feedf;
         expf = presets[idx].expf;
         worldToForm();
-    };
-
-    var updateUniformsColors = function()
-    {
-        var values = $("#gradient").gradient("getValuesRGBS");
-        for(var i=0; i<values.length; i++)
-        {
-            var v = values[i];
-            mColors[i].value = new THREE.Vector4(v[0], v[1], v[2], v[3]);
-        }
-
-        mColorsNeedUpdate = false;
-    };
-
-    updateStatShader = function(idx)
-    {
-        var elId = statShaders[idx];
-        updateStatShaderById(elId);
-    };
-
-    var updateStatShaderById = function(shaderId)
-    {
-        mStatMaterial = new THREE.ShaderMaterial({
-            uniforms: mStatMaterial.uniforms,
-            vertexShader: mStatMaterial.vertexShader,
-            fragmentShader: document.getElementById(shaderId).textContent
-        });
-        fragmentShaderId = shaderId;
-        updateShareString();
-    }
-
-    var onUpdatedColor = function()
-    {
-        mColorsNeedUpdate = true;
-        updateShareString();
     };
 
     var onMouseMove = function(e)
@@ -415,71 +361,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         window.open(dataURL, "name-"+Math.random());
     };
 
-    // resize canvas to fullscreen, scroll to upper left
-    // corner and try to enable fullscreen mode and vice-versa
-    fullscreen = function() {
-
-        var canv = $('#myCanvas');
-        var elem = canv.get(0);
-
-        if(isFullscreen())
-        {
-            // end fullscreen
-            if (elem.cancelFullscreen) {
-                elem.cancelFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.webkitCancelFullScreen) {
-                document.webkitCancelFullScreen();
-            }
-        }
-
-        if(!isFullscreen())
-        {
-            // save current dimensions as old
-            window.oldCanvSize = {
-                width : canv.width(),
-                height: canv.height()
-            };
-
-            // adjust canvas to screen size
-            // this should be just a resize but some issue with mouse/brush in fullscreen
-            // makes resize not initialize properly
-            //resize(screen.width, screen.height);
-            init_gl(screen.width, screen.height);
-
-            // scroll to upper left corner
-            $('html, body').scrollTop(canv.offset().top);
-            $('html, body').scrollLeft(canv.offset().left);
-
-            // request fullscreen in different flavours
-            if (elem.requestFullscreen) {
-                elem.requestFullscreen();
-            } else if (elem.mozRequestFullScreen) {
-                elem.mozRequestFullScreen();
-            } else if (elem.webkitRequestFullscreen) {
-                elem.webkitRequestFullscreen();
-            }
-        }
-    };
-
-    var isFullscreen = function()
-    {
-        return document.mozFullScreenElement ||
-            document.webkitCurrentFullScreenElement ||
-            document.fullscreenElement;
-    };
-
-    $(document).bind('webkitfullscreenchange mozfullscreenchange fullscreenchange', function(ev) {
-        // restore old canvas size
-        if(!isFullscreen()) {
-            // this should be just a resize but some issue with mouse/brush in fullscreen
-            // makes resize not initialize properly
-            //resize(window.oldCanvSize.width, window.oldCanvSize.height);
-            init_gl(window.oldCanvSize.width, window.oldCanvSize.height);
-        }
-    });
-
     var worldToForm = function()
     {
         $("#sld_curl").slider("value", curlf);
@@ -489,28 +370,19 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         $("#sld_feedback").slider("value", feedf);
         $("#sld_exponent").slider("value", expf);
         $("#sld_timesteps").slider("value", timesteps);
-        document.shader.scene.value = getFragmentShaderIdByString(fragmentShaderId);
     };
 
-    var init_gradient = function()
+    var init_color = function()
     {
-
-        $("#gradient").gradient({
-            values: [
-                [0,    '#000000'],
-                [0.25, '#190087'],
-                [0.5,  '#A600CF'],
-                [0.75, '#FF0202'],
-                [1.0,  '#FFE71B']
-            ]
+        $('.color').colorPicker({
+            color: 'rgb(255, 255, 255)',
+            renderCallback: function() {
+                mColor = this.color.colors.rgb;
+                mColorsNeedUpdate = true;
+                updateShareString();
+            }
         });
-        loadGradientPreset(0);
-
-        // KLUDGE!
-        colorPicker.offsetX = -512;
-        colorPicker.offsetY = -256;
-
-        document.getElementById("gradient").onselectstart = function () {return false;};
+        mColor = { r: 1.0, g: 1.0, b: 1.0 };
     };
 
     var init_controls = function()
@@ -579,10 +451,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             icons : {primary : "ui-icon-image"},
             text : false
         });
-        $("#btn_fullscreen").button({
-            icons : {primary : "ui-icon-arrow-4-diag"},
-            text : false
-        });
 
         $("#notworking").click(function(){
             $("#requirement_dialog").dialog("open");
@@ -598,27 +466,12 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         setTimeout(updateShareString, 1000);
     };
 
-    var isInvalidFragmentShaderId = function(str)
-    {
-        return getFragmentShaderIdByString(str) == -1;
-    };
-
-    var getFragmentShaderIdByString = function(str)
-    {
-        for (var shaderId in statShaders) {
-            if (str == statShaders[shaderId]) {
-                return shaderId;
-            }
-        }
-        return -1;
-    };
-
     parseShareString = function()
     {
         var str = $("#share").val();
         var fields = str.split(",");
 
-        if(fields.length != 18)
+        if(fields.length != 7)
         {
             alertInvalidShareString();
             return;
@@ -631,8 +484,6 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         var newLapf = parseFloat(fields[4]);
         var newFeedf = parseFloat(fields[5]);
         var newExpf = parseFloat(fields[6]);
-        var newFragmentShaderId = fields[7];
-
 
         if(
             isNaN(newCurlf) ||
@@ -641,35 +492,12 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
             isNaN(newLapf) ||
             isNaN(newFeedf) ||
             isNaN(newExpf) ||
-            isNaN(newTimesteps) ||
-            isInvalidFragmentShaderId(newFragmentShaderId))
+            isNaN(newTimesteps))
         {
             alertInvalidShareString();
             return;
         }
 
-        var newValues = [];
-        for(var i=0; i<5; i++)
-        {
-            var v = [parseFloat(fields[8+2*i]), fields[8+2*i+1]];
-
-            if(isNaN(v[0]))
-            {
-                alertInvalidShareString();
-                return;
-            }
-
-            // Check if the string is a valid color.
-            if(! /^#[0-9A-F]{6}$/i.test(v[1]))
-            {
-                alertInvalidShareString();
-                return;
-            }
-
-            newValues.push(v);
-        }
-
-        $("#gradient").gradient("setValues", newValues);
         curlf = newCurlf;
         fluxf = newFluxf;
         divf = newDivf;
@@ -677,34 +505,13 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         feedf = newFeedf;
         expf = newExpf;
         timesteps = newTimesteps;
-        fragmentShaderId = newFragmentShaderId;
-        updateStatShaderById(fragmentShaderId);
         worldToForm();
     };
 
     updateShareString = function()
     {
-        var str = "".concat(curlf, ",", fluxf, ",", timesteps, ",", divf, ",", lapf, ",", feedf, ",", expf, ",", fragmentShaderId);
-
-        var values = $("#gradient").gradient("getValues");
-        for(var i=0; i<values.length; i++)
-        {
-            var v = values[i];
-            str += "".concat(",", v[0], ",", v[1]);
-        }
+        var str = "".concat(curlf, ",", fluxf, ",", timesteps, ",", divf, ",", lapf, ",", feedf, ",", expf);
         $("#share").val(str);
     };
-
-    loadGradientPreset = function(idx)
-    {
-        var newValues = [];
-        for(var i=0; i<5; i++)
-        {
-            var v = [gradient_presets[idx][2*i], gradient_presets[idx][2*i+1]];
-            newValues.push(v);
-        }
-
-        $("#gradient").gradient("setValues", newValues);
-    }
 
 })();

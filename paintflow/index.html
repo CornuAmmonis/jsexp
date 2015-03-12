@@ -3,14 +3,12 @@
     <head>
         <title>Smoke</title>
         <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
-        <link rel="stylesheet" type="text/css" href="../gradientui/gradientui.css"/>
-        <link type="text/css" href="../3rd/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" />
-        <script type="text/javascript" src="../3rd/jquery-1.6.2.min.js"></script>
-        <script type="text/javascript" src="../3rd/jquery-ui-1.8.16.custom.min.js"></script>
-        <script type="text/javascript" src="../3rd/colorPicker.js"></script>
-        <script type="text/javascript" src="../3rd/three.min.js"></script>
-        <script type="text/javascript" src="../gradientui/gradientui.js"></script>
-        <!--script type="text/javascript" src="http://mrdoob.github.com/three.js/build/three.min.js"></script-->
+        <link rel="stylesheet" type="text/css" href="../3rd/jquery-ui.min.css">
+        <script type="text/javascript" src="../3rd/jquery-1.11.2.min.js"></script>
+        <script type="text/javascript" src="../3rd/jquery-ui.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+        <script type="text/javascript" src="../3rd/colors.js"></script>
+        <script type="text/javascript" src="../3rd/jqColorPicker.js"></script>
         <script type="x-shader/x-vertex" id="standardVertexShader">
             varying vec2 vUv;
 
@@ -25,9 +23,8 @@
             const float _K1 = 4.0/6.0; // edge-neighbors
             const float _K2 = 1.0/6.0; // vertex-neighbors
             //const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
-            //const float wds = 4.8284271; // 2.0 + 2.0 * sqrt(2.0);
-            const float sq2 = 0.3; // sqrt(2.0)/2.0;
-            const float wds = 2.0 + 4.0 * sq2; // 2.0 + 2.0 * sqrt(2.0);
+            const float sq2 = 0.3;
+            const float wds = 2.0 + 4.0 * sq2;
             const float pi_over_2 = 1.57079632679;
 
             varying vec2 vUv;
@@ -109,18 +106,19 @@
                     sint = sin(theta);
                 }
 
-                float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + lps2 * mag * cost * div;
-                float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + lps2 * mag * sint * div;
+                float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + 10.0 * lps2 * mag * cost * div;
+                float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + 10.0 * lps2 * mag * sint * div;
 
                 float a = ta * cos(curl_e) - tb * sin(curl_e);
                 float b = ta * sin(curl_e) + tb * cos(curl_e);
-                
+
                 if(brush.x > 0.0)
                 {
-                    vec2 diff = (vUv - brush)/texel;
-                    float dist = dot(diff, diff);
-                    if(dist < 5.0)
+                    vec2 diff = (vUv - brush) / texel;
+                    float dist = sqrt(dot(diff, diff));
+                    if(dist < 50.0) {
                         div = 0.1 + 2.0 * div;
+                    }
                 }
 
                 // hack
@@ -136,7 +134,7 @@
         <script type="x-shader/x-fragment" id="paintFragmentShader">
             #define SQRT_2 1.41421356237
             #define SQRT_2_OVER_2 0.70710678118
-            #define MIX_SCALE 0.2
+            #define MIX_SCALE 0.1
             #define ONE_OVER_8 0.125
             #define CUTOFF 0.0001
 
@@ -146,7 +144,7 @@
             uniform sampler2D tSource;
             uniform sampler2D sSource;
             uniform vec2 brush;
-            uniform vec4 color1;
+            uniform vec4 color;
 
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
@@ -176,7 +174,7 @@
 
             float mixWeight(float x, float y) {
                 vec2 n = normalize(vec2(x, y));
-                return max(0.0, MIX_SCALE * (SQRT_2_OVER_2 + 0.5) * (n.x + n.y)/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
+                return max(0.0, MIX_SCALE * (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * (n.x + n.y)/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
@@ -184,9 +182,7 @@
             }
 
             //packed e, w, n, s / ne, nw, se, sw
-            vec4 mixNeighbors(float a, float b, float d, float e, float f, vec4 n0, vec4 n1, vec4 d0, vec4 d1, vec4 e0, vec4 e1, vec4 f0, vec4 f1) {
-                vec4 m0 = vec4(a, -a, b, -b);
-                vec4 m1 = SQRT_2_OVER_2 * vec4(a + b, - a + b, a - b, - a - b);
+            vec4 mixNeighbors(float d, float e, float f, vec4 n0, vec4 n1, vec4 m0, vec4 m1, vec4 d0, vec4 d1, vec4 e0, vec4 e1, vec4 f0, vec4 f1) {
                 vec4 rgbC = absorbance(d, e, f);
                 vec4 rgb0 = absorbance(d0.x, e0.x, f0.x);
                 vec4 rgb1 = absorbance(d0.y, e0.y, f0.y);
@@ -277,19 +273,20 @@
                 vec4 f1 = vec4(f_ne, f_nw, f_se, f_sw);
                 vec4 n0 = vec4(a_e, -a_w, b_n, -b_s);
                 vec4 n1 = SQRT_2_OVER_2 * vec4(a_ne + b_ne, - a_nw + b_nw, a_se - b_se, - a_sw - b_sw);
+                vec4 m0 = vec4(a, -a, b, -b);
+                vec4 m1 = SQRT_2_OVER_2 * vec4(a + b, - a + b, a - b, - a - b);
 
                 if(brush.x > 0.0)
                 {
-                    //vec2 diff = (vUv - brush) / texel;
                     vec2 diff = (vUv - brush) / texel;
                     float dist = sqrt(dot(diff, diff));
                     if(dist < 50.0) {
-                        gl_FragColor = color1;
+                        gl_FragColor = color;
                         return;
                     }
                 }
 
-                gl_FragColor = mixNeighbors(a, b, d, e, f, n0, n1, d0, d1, e0, e1, f0, f1);
+                gl_FragColor = mixNeighbors(d, e, f, n0, n1, m0, m1, d0, d1, e0, e1, f0, f1);
             }
         </script>
         <script type="x-shader/x-fragment" id="screenFragmentShader">
@@ -306,16 +303,6 @@
         </script>
         <script type="text/javascript" src="paintflow.js"></script>
         <meta charset="UTF-8">
-        <style>
-            #gradient
-            {
-                height: 40px;
-                width: 85%;
-                margin-top: 5px;
-                margin-left:auto;
-                margin-right:auto;
-            }
-        </style>
         <script>
             $(function()
             {
@@ -339,7 +326,6 @@
                 </ol>
             </section>
             <section id="controls">
-                <!--header><h4>Controls</h4></header-->
                 <form name="ex">
                     Preset:
                     <select name="scene" style="width:100%"
@@ -357,24 +343,9 @@
                         <option value="10">Chaotic Spouts</option>
                     </select>
                 </form>
-                <form name="shader">
-                    Render style:
-                    <select name="scene" style="width:100%"
-                            onchange="updateStatShader(document.shader.scene.selectedIndex)">
-                        <option value="0" selected="selected">Default</option>
-                    </select>
-                </form>
-                <form name="gradient">
-                    Color preset:
-                    <select name="scene" style="width:100%"
-                            onchange="loadGradientPreset(document.gradient.scene.selectedIndex)">
-                        <option value="0" selected="selected">Default</option>
-                    </select>
-                </form>
                 <p style="text-align:center">
                     <button id="btn_clear" onclick="clean()">Reset</button>
                     <button id="btn_snapshot" onclick="snapshot()">Take snapshot</button>
-                    <button id="btn_fullscreen" onclick="fullscreen()">Fullscreen mode</button>
                 <p/>
                 <h4 class="unsafe">Advanced settings</h4>
                 Curl feed:
@@ -404,8 +375,10 @@
                 Timesteps per render:
                 <span class="remark" id="timesteps"></span><br/>
                 <div id="sld_timesteps" class="slider"></div>
-                Colors:
-                <div id="gradient" style=""></div>
+
+                Color:
+                <input class="color" style=""></input>
+
                 <div style="font-size:x-small">Share (paste and press enter):</div>
                 <div style="text-align:center"><input id="share" style="width:85%"/></div>
             </section>
