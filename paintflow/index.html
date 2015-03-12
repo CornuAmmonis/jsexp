@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Smoke</title>
+        <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
+        <link rel="stylesheet" type="text/css" href="../gradientui/gradientui.css"/>
+        <link type="text/css" href="../3rd/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" />
+        <script type="text/javascript" src="../3rd/jquery-1.6.2.min.js"></script>
+        <script type="text/javascript" src="../3rd/jquery-ui-1.8.16.custom.min.js"></script>
+        <script type="text/javascript" src="../3rd/colorPicker.js"></script>
+        <script type="text/javascript" src="../3rd/three.min.js"></script>
+        <script type="text/javascript" src="../gradientui/gradientui.js"></script>
+        <!--script type="text/javascript" src="http://mrdoob.github.com/three.js/build/three.min.js"></script-->
+        <script type="x-shader/x-vertex" id="standardVertexShader">
+            varying vec2 vUv;
+
+            void main()
+            {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="gsFragmentShader">
+            const float _K0 = -20.0/6.0; // center weight
+            const float _K1 = 4.0/6.0; // edge-neighbors
+            const float _K2 = 1.0/6.0; // vertex-neighbors
+            //const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
+            //const float wds = 4.8284271; // 2.0 + 2.0 * sqrt(2.0);
+            const float sq2 = 0.3; // sqrt(2.0)/2.0;
+            const float wds = 2.0 + 4.0 * sq2; // 2.0 + 2.0 * sqrt(2.0);
+            const float pi_over_2 = 1.57079632679;
+
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform float delta;
+            uniform float curlf;
+            uniform float fluxf;
+            uniform float divf;
+            uniform float lapf;
+            uniform float feedf;
+            uniform float expf;
+            uniform vec2 brush;
+            
+            vec2 texel = vec2(1.0/screenWidth, 1.0/screenHeight);
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+            vec2 n  = vec2(0.0, step_y);
+            vec2 ne = vec2(step_x, step_y);
+            vec2 e  = vec2(step_x, 0.0);
+            vec2 se = vec2(step_x, -step_y);
+            vec2 s  = vec2(0.0, -step_y);
+            vec2 sw = vec2(-step_x, -step_y);
+            vec2 w  = vec2(-step_x, 0.0);
+            vec2 nw = vec2(-step_x, step_y);
+
+            bool isnan(in float val)
+            {
+              return (val <= 0.0 || 0.0 <= val) ? false : true;
+            }
+
+            float atan2(in float y, in float x)
+            {
+                float s = (abs(x) > abs(y)) ? 1.0 : 0.0;
+                return mix(pi_over_2 - atan(x,y), atan(y,x), s);
+            }
+
+            void main()
+            {
+                float cs = curlf;
+                float ws = fluxf;
+                float sp = expf;
+                float amp = feedf;
+                float lps = lapf;
+                float lps2 = divf;
+                if(brush.x < -5.0)
+                {
+                    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                    return;
+                }
+                
+                vec3 uv = texture2D(tSource, vUv).rgb;
+
+                vec3 uv_n = texture2D(tSource, vUv+n).rgb;
+                vec3 uv_e = texture2D(tSource, vUv+e).rgb;
+                vec3 uv_s = texture2D(tSource, vUv+s).rgb;
+                vec3 uv_w = texture2D(tSource, vUv+w).rgb;
+
+                vec3 uv_nw = texture2D(tSource, vUv+nw).rgb;
+                vec3 uv_sw = texture2D(tSource, vUv+sw).rgb;
+                vec3 uv_ne = texture2D(tSource, vUv+ne).rgb;
+                vec3 uv_se = texture2D(tSource, vUv+se).rgb;
+
+                vec3 lapl  = _K0*uv + _K1*(uv_n + uv_e + uv_w + uv_s) + _K2*(uv_nw + uv_sw + uv_ne + uv_se);
+                float curl = (uv_n.r - uv_s.r - uv_e.g + uv_w.g + sq2 * (uv_nw.r + uv_nw.g) + sq2 * (uv_ne.r - uv_ne.g) + sq2 * (uv_sw.g - uv_sw.r) - sq2 * (uv_se.g + uv_se.r));
+                float curl_e = cs * sign(curl) * pow(abs(curl), sp);
+                vec2 flux  = vec2(uv_w.r + uv_e.r - wds * uv.r, uv_s.g + uv_n.g - wds * uv.g) + sq2 * (uv_nw.rg + uv_ne.rg + uv_se.rg + uv_sw.rg);
+                float div  = uv_s.g - uv_n.g - uv_e.r + uv_w.r + sq2 * (uv_nw.r - uv_nw.g) - sq2 * (uv_ne.r + uv_ne.g) + sq2 * (uv_sw.r + uv_sw.g) + sq2 * (uv_se.g - uv_se.r);
+
+                float theta, mag, cost, sint = 0.0;
+                const float fudge = 10000.0;
+                if (!(uv.r == 0.0 && uv.g == 0.0)) {
+                    theta = atan2(fudge * uv.g, fudge * uv.r);
+                    mag = sqrt(uv.r*uv.r + uv.g*uv.g);
+                    cost = cos(theta);
+                    sint = sin(theta);
+                }
+
+                float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + lps2 * mag * cost * div;
+                float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + lps2 * mag * sint * div;
+
+                //float ta = amp * uv.r + ws * flux.r - lps * sign(uv.r) * lapl.b + lps2 * sign(uv.r) * div;
+                //float tb = amp * uv.g + ws * flux.g - lps * sign(uv.g) * lapl.b + lps2 * sign(uv.g) * div;
+
+                float a = ta * cos(curl_e) - tb * sin(curl_e);
+                float b = ta * sin(curl_e) + tb * cos(curl_e);
+                
+                if(brush.x > 0.0)
+                {
+                    vec2 diff = (vUv - brush)/texel;
+                    float dist = dot(diff, diff);
+                    if(dist < 5.0)
+                        div = 0.1 + 2.0 * div;
+                }
+
+                // hack
+                if (isnan(a) || isnan(b) || isnan(div)) {
+                    a = uv.r;
+                    b = uv.g;
+                    div = uv.b;
+                }
+                
+                gl_FragColor = vec4(clamp(a, -1.0, 1.0), clamp(b, -1.0, 1.0), div, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="paintFragmentShader">
+            #define SQRT_2 1.41421356237
+            #define SQRT_2_OVER_2 0.70710678118
+            #define MIX_SCALE 0.2
+            #define ONE_OVER_8 0.125
+            #define CUTOFF 0.0001
+
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform sampler2D sSource;
+
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+            vec2 n  = vec2(0.0, step_y);
+            vec2 ne = vec2(step_x, step_y);
+            vec2 e  = vec2(step_x, 0.0);
+            vec2 se = vec2(step_x, -step_y);
+            vec2 s  = vec2(0.0, -step_y);
+            vec2 sw = vec2(-step_x, -step_y);
+            vec2 w  = vec2(-step_x, 0.0);
+            vec2 nw = vec2(-step_x, step_y);
+
+            vec4 reflectance(vec4 absorption) {
+                return 1.0 + absorption - sqrt(pow(absorption, 2.0) + (2.0 * absorption));
+            }
+
+            vec4 absorbance(float r, float g, float b) {
+                vec4 rgb = max(CUTOFF, vec4(r, g, b, 0.0));
+                return pow((1.0 - rgb), 2.0) / (2.0 * rgb);
+            }
+
+            vec4 mixAbs(vec4 absorption0, vec4 absorption1, float mix) {
+                return mix * absorption0 + (1.0 - mix) * absorption1;
+            }
+
+            float mixWeight(float x, float y) {
+                vec2 n = normalize(vec2(x, y));
+                return max(0.0, MIX_SCALE * (SQRT_2_OVER_2 + 0.5) * (n.x + n.y)/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
+            }
+
+            vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
+                return ONE_OVER_8 * (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7);
+            }
+
+            //packed e, w, n, s / ne, nw, se, sw
+            vec4 mixNeighbors(float a, float b, float d, float e, float f, vec4 n0, vec4 n1, vec4 d0, vec4 d1, vec4 e0, vec4 e1, vec4 f0, vec4 f1) {
+                vec4 m0 = vec4(a, -a, b, -b);
+                vec4 m1 = SQRT_2_OVER_2 * vec4(a + b, - a + b, a - b, - a - b);
+                vec4 rgbC = absorbance(d, e, f);
+                vec4 rgb0 = absorbance(d0.x, e0.x, f0.x);
+                vec4 rgb1 = absorbance(d0.y, e0.y, f0.y);
+                vec4 rgb2 = absorbance(d0.z, e0.z, f0.z);
+                vec4 rgb3 = absorbance(d0.w, e0.w, f0.w);
+                vec4 rgb4 = absorbance(d1.x, e1.x, f1.x);
+                vec4 rgb5 = absorbance(d1.y, e1.y, f1.y);
+                vec4 rgb6 = absorbance(d1.z, e1.z, f1.z);
+                vec4 rgb7 = absorbance(d1.w, e1.w, f1.w);
+                float mw0 = mixWeight(m0.x, n0.x);
+                float mw1 = mixWeight(m0.y, n0.y);
+                float mw2 = mixWeight(m0.z, n0.z);
+                float mw3 = mixWeight(m0.w, n0.w);
+                float mw4 = mixWeight(m1.x, n1.x);
+                float mw5 = mixWeight(m1.y, n1.y);
+                float mw6 = mixWeight(m1.z, n1.z);
+                float mw7 = mixWeight(m1.w, n1.w);
+                vec4 mx0 = mixAbs(rgb0, rgbC, mw0);
+                vec4 mx1 = mixAbs(rgb1, rgbC, mw1);
+                vec4 mx2 = mixAbs(rgb2, rgbC, mw2);
+                vec4 mx3 = mixAbs(rgb3, rgbC, mw3);
+                vec4 mx4 = mixAbs(rgb4, rgbC, mw4);
+                vec4 mx5 = mixAbs(rgb5, rgbC, mw5);
+                vec4 mx6 = mixAbs(rgb6, rgbC, mw6);
+                vec4 mx7 = mixAbs(rgb7, rgbC, mw7);
+                vec4 rgbAvg = vectorAvg(mx0, mx1, mx2, mx3, mx4, mx5, mx6, mx7);
+                return reflectance(rgbAvg);
+            }
+
+            void main()
+            {
+                float a = texture2D(tSource, vUv).x);
+                float b = texture2D(tSource, vUv).y);
+                float d = texture2D(sSource, vUv).x);
+                float e = texture2D(sSource, vUv).y);
+                float f = texture2D(sSource, vUv).z);
+
+                float a_n =  texture2D(tSource, vUv+n ).x);
+                float a_e =  texture2D(tSource, vUv+e ).x);
+                float a_s =  texture2D(tSource, vUv+s ).x);
+                float a_w =  texture2D(tSource, vUv+w ).x);
+                float a_nw = texture2D(tSource, vUv+nw).x);
+                float a_sw = texture2D(tSource, vUv+sw).x);
+                float a_ne = texture2D(tSource, vUv+ne).x);
+                float a_se = texture2D(tSource, vUv+se).x);
+
+                float b_n =  texture2D(tSource, vUv+n ).y);
+                float b_e =  texture2D(tSource, vUv+e ).y);
+                float b_s =  texture2D(tSource, vUv+s ).y);
+                float b_w =  texture2D(tSource, vUv+w ).y);
+                float b_nw = texture2D(tSource, vUv+nw).y);
+                float b_sw = texture2D(tSource, vUv+sw).y);
+                float b_ne = texture2D(tSource, vUv+ne).y);
+                float b_se = texture2D(tSource, vUv+se).y);
+
+                float d_n =  texture2D(sSource, vUv+n ).x);
+                float d_e =  texture2D(sSource, vUv+e ).x);
+                float d_s =  texture2D(sSource, vUv+s ).x);
+                float d_w =  texture2D(sSource, vUv+w ).x);
+                float d_nw = texture2D(sSource, vUv+nw).x);
+                float d_sw = texture2D(sSource, vUv+sw).x);
+                float d_ne = texture2D(sSource, vUv+ne).x);
+                float d_se = texture2D(sSource, vUv+se).x);
+
+                float e_n =  texture2D(sSource, vUv+n ).y);
+                float e_e =  texture2D(sSource, vUv+e ).y);
+                float e_s =  texture2D(sSource, vUv+s ).y);
+                float e_w =  texture2D(sSource, vUv+w ).y);
+                float e_nw = texture2D(sSource, vUv+nw).y);
+                float e_sw = texture2D(sSource, vUv+sw).y);
+                float e_ne = texture2D(sSource, vUv+ne).y);
+                float e_se = texture2D(sSource, vUv+se).y);
+
+                float f_n =  texture2D(sSource, vUv+n ).z);
+                float f_e =  texture2D(sSource, vUv+e ).z);
+                float f_s =  texture2D(sSource, vUv+s ).z);
+                float f_w =  texture2D(sSource, vUv+w ).z);
+                float f_nw = texture2D(sSource, vUv+nw).z);
+                float f_sw = texture2D(sSource, vUv+sw).z);
+                float f_ne = texture2D(sSource, vUv+ne).z);
+                float f_se = texture2D(sSource, vUv+se).z);
+
+                vec4 d0 = vec4(d_e, d_w, d_n, d_s);
+                vec4 d1 = vec4(d_ne, d_nw, d_se, d_sw);
+                vec4 e0 = vec4(e_e, e_w, e_n, e_s);
+                vec4 e1 = vec4(e_ne, e_nw, e_se, e_sw);
+                vec4 f0 = vec4(f_e, f_w, f_n, f_s);
+                vec4 f1 = vec4(f_ne, f_nw, f_se, f_sw);
+                vec4 n0 = vec4(a_e, -a_w, b_n, -b_s);
+                vec4 n1 = SQRT_2_OVER_2 * vec4(a_ne + b_ne, - a_nw + b_nw, a_se - b_se, - a_sw - b_sw);
+
+                gl_FragColor = mixNeighbors(a, b, d, e, f, n0, n1, d0, d1, e0, e1, f0, f1);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="screenFragmentShader">
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform sampler2D sSource;
+            
+            void main()
+            {
+                gl_FragColor = texture2D(sSource, vUv);
+            }
+        </script>
+        <script type="text/javascript" src="paintflow.js"></script>
+        <meta charset="UTF-8">
+        <style>
+            #gradient
+            {
+                height: 40px;
+                width: 85%;
+                margin-top: 5px;
+                margin-left:auto;
+                margin-right:auto;
+            }
+        </style>
+        <script>
+            $(function()
+            {
+                init();
+            });
+        </script>
+    </head>
+    <body>
+        <header>
+            <h1>Paintflow</h1>
+        </header>
+        <div id="simulation">
+        <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
+        <aside class="panel">
+            <section id="instructions">
+                <header><h4>Instructions</h4></header>
+                <ol>
+                    <li>Paint on the canvas.</li>
+                    <li>Change the parameters, try the presets.</li>
+                    <li>Watch the evolution.</li>
+                </ol>
+            </section>
+            <section id="controls">
+                <!--header><h4>Controls</h4></header-->
+                <form name="ex">
+                    Preset:
+                    <select name="scene" style="width:100%"
+                            onchange="loadPreset(document.ex.scene.selectedIndex)">
+                        <option value="0" selected="selected">Default</option>
+                        <option value="1">Slow Waves</option>
+                        <option value="2">Twist</option>
+                        <option value="3">Spout</option>
+                        <option value="4">Anemone</option>
+                        <option value="5">Logistic</option>
+                        <option value="6">Anisotropic</option>
+                        <option value="7">Oregonator</option>
+                        <option value="8">Blink</option>
+                        <option value="9">Mini Spouts</option>
+                        <option value="10">Chaotic Spouts</option>
+                    </select>
+                </form>
+                <form name="shader">
+                    Render style:
+                    <select name="scene" style="width:100%"
+                            onchange="updateStatShader(document.shader.scene.selectedIndex)">
+                        <option value="0" selected="selected">Default</option>
+                    </select>
+                </form>
+                <form name="gradient">
+                    Color preset:
+                    <select name="scene" style="width:100%"
+                            onchange="loadGradientPreset(document.gradient.scene.selectedIndex)">
+                        <option value="0" selected="selected">Default</option>
+                    </select>
+                </form>
+                <p style="text-align:center">
+                    <button id="btn_clear" onclick="clean()">Reset</button>
+                    <button id="btn_snapshot" onclick="snapshot()">Take snapshot</button>
+                    <button id="btn_fullscreen" onclick="fullscreen()">Fullscreen mode</button>
+                <p/>
+                <h4 class="unsafe">Advanced settings</h4>
+                Curl feed:
+                <span class="remark" id="curl"></span><br/>
+                <div id="sld_curl" class="slider"></div>
+                
+                Flux feed:
+                <span class ="remark" id="flux"></span><br/>
+                <div id="sld_flux" class="slider"></div>
+
+                Divergence feed:
+                <span class ="remark" id="divergence"></span><br/>
+                <div id="sld_divergence" class="slider"></div>
+
+                Laplacian feed:
+                <span class ="remark" id="laplacian"></span><br/>
+                <div id="sld_laplacian" class="slider"></div>
+
+                Feedback amplification:
+                <span class ="remark" id="feedback"></span><br/>
+                <div id="sld_feedback" class="slider"></div>
+
+                Curl exponent:
+                <span class ="remark" id="exponent"></span><br/>
+                <div id="sld_exponent" class="slider"></div>
+
+                Timesteps per render:
+                <span class="remark" id="timesteps"></span><br/>
+                <div id="sld_timesteps" class="slider"></div>
+                Colors:
+                <div id="gradient" style=""></div>
+                <div style="font-size:x-small">Share (paste and press enter):</div>
+                <div style="text-align:center"><input id="share" style="width:85%"/></div>
+            </section>
+        </aside>
+        </div>
+        <footer>
+                <div id="copyright">
+                    "Smoke" &copy;2014 <a href="https://twitter.com/cornusammonis">@cornusammonis</a>
+                    <a href="https://github.com/CornuAmmonis/jsexp">Github</a><br>
+                    Forked from "Reaction diffusion system (Gray-Scott model)"
+                    &copy;2012
+                    <a href="https://twitter.com/pmneila">@pmneila</a>
+                    <a href="https://github.com/pmneila/jsexp">Github</a>
+                    <a id="notworking" href="#">Not working?</a>
+                </div>
+        </footer>
+        
+        <div id="requirement_dialog" title="Requirements">
+            <p>This simulation requires the GL extensions framebuffer_object and texture_float.
+            If you cannot see the simulation your system probably lacks at least one of these extensions.</p>
+            
+            <p>In Google Chrome, you can see the available GL extensions going to chrome://gpu.</p>
+        </div>
+    </body>
+</html>
