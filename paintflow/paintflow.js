@@ -123,7 +123,7 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
     ];
 
     var statShaders = [
-        "anisoStatFragmentShader"
+        "paintFragmentShader"
     ];
 
     // Configuration.

@@ -42,10 +42,11 @@
             uniform float feedf;
             uniform float expf;
             uniform vec2 brush;
-            
-            vec2 texel = vec2(1.0/screenWidth, 1.0/screenHeight);
+
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
+            vec2 texel = vec2(step_x, step_y);
+
             vec2 n  = vec2(0.0, step_y);
             vec2 ne = vec2(step_x, step_y);
             vec2 e  = vec2(step_x, 0.0);
@@ -74,6 +75,7 @@
                 float amp = feedf;
                 float lps = lapf;
                 float lps2 = divf;
+
                 if(brush.x < -5.0)
                 {
                     gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
@@ -110,9 +112,6 @@
                 float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + lps2 * mag * cost * div;
                 float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + lps2 * mag * sint * div;
 
-                //float ta = amp * uv.r + ws * flux.r - lps * sign(uv.r) * lapl.b + lps2 * sign(uv.r) * div;
-                //float tb = amp * uv.g + ws * flux.g - lps * sign(uv.g) * lapl.b + lps2 * sign(uv.g) * div;
-
                 float a = ta * cos(curl_e) - tb * sin(curl_e);
                 float b = ta * sin(curl_e) + tb * cos(curl_e);
                 
@@ -146,9 +145,13 @@
             uniform float screenHeight;
             uniform sampler2D tSource;
             uniform sampler2D sSource;
+            uniform vec2 brush;
+            uniform vec4 color1;
 
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
+            vec2 texel = vec2(step_x, step_y);
+
             vec2 n  = vec2(0.0, step_y);
             vec2 ne = vec2(step_x, step_y);
             vec2 e  = vec2(step_x, 0.0);
@@ -159,12 +162,12 @@
             vec2 nw = vec2(-step_x, step_y);
 
             vec4 reflectance(vec4 absorption) {
-                return 1.0 + absorption - sqrt(pow(absorption, 2.0) + (2.0 * absorption));
+                return vec4(1.0) + absorption - sqrt(pow(absorption, vec4(2.0)) + (2.0 * absorption));
             }
 
             vec4 absorbance(float r, float g, float b) {
-                vec4 rgb = max(CUTOFF, vec4(r, g, b, 0.0));
-                return pow((1.0 - rgb), 2.0) / (2.0 * rgb);
+                vec4 rgb = max(vec4(CUTOFF), vec4(r, g, b, 0.0));
+                return pow((1.0 - rgb), vec4(2.0)) / (2.0 * rgb);
             }
 
             vec4 mixAbs(vec4 absorption0, vec4 absorption1, float mix) {
@@ -215,56 +218,56 @@
 
             void main()
             {
-                float a = texture2D(tSource, vUv).x);
-                float b = texture2D(tSource, vUv).y);
-                float d = texture2D(sSource, vUv).x);
-                float e = texture2D(sSource, vUv).y);
-                float f = texture2D(sSource, vUv).z);
+                float a = texture2D(tSource, vUv).x;
+                float b = texture2D(tSource, vUv).y;
+                float d = texture2D(sSource, vUv).x;
+                float e = texture2D(sSource, vUv).y;
+                float f = texture2D(sSource, vUv).z;
 
-                float a_n =  texture2D(tSource, vUv+n ).x);
-                float a_e =  texture2D(tSource, vUv+e ).x);
-                float a_s =  texture2D(tSource, vUv+s ).x);
-                float a_w =  texture2D(tSource, vUv+w ).x);
-                float a_nw = texture2D(tSource, vUv+nw).x);
-                float a_sw = texture2D(tSource, vUv+sw).x);
-                float a_ne = texture2D(tSource, vUv+ne).x);
-                float a_se = texture2D(tSource, vUv+se).x);
+                float a_n =  texture2D(tSource, vUv+n ).x;
+                float a_e =  texture2D(tSource, vUv+e ).x;
+                float a_s =  texture2D(tSource, vUv+s ).x;
+                float a_w =  texture2D(tSource, vUv+w ).x;
+                float a_nw = texture2D(tSource, vUv+nw).x;
+                float a_sw = texture2D(tSource, vUv+sw).x;
+                float a_ne = texture2D(tSource, vUv+ne).x;
+                float a_se = texture2D(tSource, vUv+se).x;
 
-                float b_n =  texture2D(tSource, vUv+n ).y);
-                float b_e =  texture2D(tSource, vUv+e ).y);
-                float b_s =  texture2D(tSource, vUv+s ).y);
-                float b_w =  texture2D(tSource, vUv+w ).y);
-                float b_nw = texture2D(tSource, vUv+nw).y);
-                float b_sw = texture2D(tSource, vUv+sw).y);
-                float b_ne = texture2D(tSource, vUv+ne).y);
-                float b_se = texture2D(tSource, vUv+se).y);
+                float b_n =  texture2D(tSource, vUv+n ).y;
+                float b_e =  texture2D(tSource, vUv+e ).y;
+                float b_s =  texture2D(tSource, vUv+s ).y;
+                float b_w =  texture2D(tSource, vUv+w ).y;
+                float b_nw = texture2D(tSource, vUv+nw).y;
+                float b_sw = texture2D(tSource, vUv+sw).y;
+                float b_ne = texture2D(tSource, vUv+ne).y;
+                float b_se = texture2D(tSource, vUv+se).y;
 
-                float d_n =  texture2D(sSource, vUv+n ).x);
-                float d_e =  texture2D(sSource, vUv+e ).x);
-                float d_s =  texture2D(sSource, vUv+s ).x);
-                float d_w =  texture2D(sSource, vUv+w ).x);
-                float d_nw = texture2D(sSource, vUv+nw).x);
-                float d_sw = texture2D(sSource, vUv+sw).x);
-                float d_ne = texture2D(sSource, vUv+ne).x);
-                float d_se = texture2D(sSource, vUv+se).x);
+                float d_n =  texture2D(sSource, vUv+n ).x;
+                float d_e =  texture2D(sSource, vUv+e ).x;
+                float d_s =  texture2D(sSource, vUv+s ).x;
+                float d_w =  texture2D(sSource, vUv+w ).x;
+                float d_nw = texture2D(sSource, vUv+nw).x;
+                float d_sw = texture2D(sSource, vUv+sw).x;
+                float d_ne = texture2D(sSource, vUv+ne).x;
+                float d_se = texture2D(sSource, vUv+se).x;
 
-                float e_n =  texture2D(sSource, vUv+n ).y);
-                float e_e =  texture2D(sSource, vUv+e ).y);
-                float e_s =  texture2D(sSource, vUv+s ).y);
-                float e_w =  texture2D(sSource, vUv+w ).y);
-                float e_nw = texture2D(sSource, vUv+nw).y);
-                float e_sw = texture2D(sSource, vUv+sw).y);
-                float e_ne = texture2D(sSource, vUv+ne).y);
-                float e_se = texture2D(sSource, vUv+se).y);
+                float e_n =  texture2D(sSource, vUv+n ).y;
+                float e_e =  texture2D(sSource, vUv+e ).y;
+                float e_s =  texture2D(sSource, vUv+s ).y;
+                float e_w =  texture2D(sSource, vUv+w ).y;
+                float e_nw = texture2D(sSource, vUv+nw).y;
+                float e_sw = texture2D(sSource, vUv+sw).y;
+                float e_ne = texture2D(sSource, vUv+ne).y;
+                float e_se = texture2D(sSource, vUv+se).y;
 
-                float f_n =  texture2D(sSource, vUv+n ).z);
-                float f_e =  texture2D(sSource, vUv+e ).z);
-                float f_s =  texture2D(sSource, vUv+s ).z);
-                float f_w =  texture2D(sSource, vUv+w ).z);
-                float f_nw = texture2D(sSource, vUv+nw).z);
-                float f_sw = texture2D(sSource, vUv+sw).z);
-                float f_ne = texture2D(sSource, vUv+ne).z);
-                float f_se = texture2D(sSource, vUv+se).z);
+                float f_n =  texture2D(sSource, vUv+n ).z;
+                float f_e =  texture2D(sSource, vUv+e ).z;
+                float f_s =  texture2D(sSource, vUv+s ).z;
+                float f_w =  texture2D(sSource, vUv+w ).z;
+                float f_nw = texture2D(sSource, vUv+nw).z;
+                float f_sw = texture2D(sSource, vUv+sw).z;
+                float f_ne = texture2D(sSource, vUv+ne).z;
+                float f_se = texture2D(sSource, vUv+se).z;
 
                 vec4 d0 = vec4(d_e, d_w, d_n, d_s);
                 vec4 d1 = vec4(d_ne, d_nw, d_se, d_sw);
@@ -274,6 +277,17 @@
                 vec4 f1 = vec4(f_ne, f_nw, f_se, f_sw);
                 vec4 n0 = vec4(a_e, -a_w, b_n, -b_s);
                 vec4 n1 = SQRT_2_OVER_2 * vec4(a_ne + b_ne, - a_nw + b_nw, a_se - b_se, - a_sw - b_sw);
+
+                if(brush.x > 0.0)
+                {
+                    //vec2 diff = (vUv - brush) / texel;
+                    vec2 diff = (vUv - brush) / texel;
+                    float dist = sqrt(dot(diff, diff));
+                    if(dist < 50.0) {
+                        gl_FragColor = color1;
+                        return;
+                    }
+                }
 
                 gl_FragColor = mixNeighbors(a, b, d, e, f, n0, n1, d0, d1, e0, e1, f0, f1);
             }
