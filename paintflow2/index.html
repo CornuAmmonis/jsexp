@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Smoke</title>
+        <title>PaintFlow</title>
         <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
-        <link rel="stylesheet" type="text/css" href="../3rd/jquery-ui.min.css">
+        <script type="text/javascript" src="../3rd/three.js"></script>
+        <script type="text/javascript" src="../3rd/dat.gui.js"></script>
         <script type="text/javascript" src="../3rd/jquery-1.11.2.min.js"></script>
-        <script type="text/javascript" src="../3rd/jquery-ui.min.js"></script>
-        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
-        <script type="text/javascript" src="../3rd/colors.js"></script>
-        <script type="text/javascript" src="../3rd/jqColorPicker.js"></script>
+        <script type="text/javascript" src="paintflow.js"></script>
         <script type="x-shader/x-vertex" id="standardVertexShader">
             varying vec2 vUv;
 
@@ -18,7 +16,7 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
         </script>
-        <script type="x-shader/x-fragment" id="gsFragmentShader">
+        <script type="x-shader/x-fragment" id="fluidFragmentShader">
             const float _K0 = -20.0/6.0; // center weight
             const float _K1 = 4.0/6.0; // edge-neighbors
             const float _K2 = 1.0/6.0; // vertex-neighbors
@@ -31,7 +29,6 @@
             uniform float screenWidth;
             uniform float screenHeight;
             uniform sampler2D tSource;
-            uniform float delta;
             uniform float curlf;
             uniform float fluxf;
             uniform float divf;
@@ -106,8 +103,8 @@
                     sint = sin(theta);
                 }
 
-                float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + 10.0 * lps2 * mag * cost * div;
-                float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + 10.0 * lps2 * mag * sint * div;
+                float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + lps2 * mag * cost * div;
+                float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + lps2 * mag * sint * div;
 
                 float a = ta * cos(curl_e) - tb * sin(curl_e);
                 float b = ta * sin(curl_e) + tb * cos(curl_e);
@@ -116,8 +113,11 @@
                 {
                     vec2 diff = (vUv - brush) / texel;
                     float dist = sqrt(dot(diff, diff));
-                    if(dist < 50.0) {
-                        div = 0.1 + 2.0 * div;
+                    const float maxDist = 50.0;
+                    if(dist < maxDist) {
+                        a = diff.x / maxDist;
+                        b = diff.y / maxDist;
+                        //div = 0.1 + 2.0 * div;
                     }
                 }
 
@@ -312,88 +312,26 @@
                 gl_FragColor = texture2D(sSource, vUv);
             }
         </script>
-        <script type="text/javascript" src="paintflow.js"></script>
-        <meta charset="UTF-8">
-        <script>
-            $(function()
+        <script type="x-shader/x-fragment" id="debugScreenFragmentShader">
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform sampler2D sSource;
+
+            void main()
             {
-                init();
-            });
+                gl_FragColor = 10000000.0 * texture2D(tSource, vUv);
+            }
         </script>
+        <meta charset="UTF-8">
     </head>
     <body>
         <header>
-            <h1>Paintflow</h1>
+            <h1>PaintFlow</h1>
         </header>
         <div id="simulation">
-        <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
-        <aside class="panel">
-            <section id="instructions">
-                <header><h4>Instructions</h4></header>
-                <ol>
-                    <li>Paint on the canvas.</li>
-                    <li>Change the parameters, try the presets.</li>
-                    <li>Watch the evolution.</li>
-                </ol>
-            </section>
-            <section id="controls">
-                <form name="ex">
-                    Preset:
-                    <select name="scene" style="width:100%"
-                            onchange="loadPreset(document.ex.scene.selectedIndex)">
-                        <option value="0" selected="selected">Default</option>
-                        <option value="1">Slow Waves</option>
-                        <option value="2">Twist</option>
-                        <option value="3">Spout</option>
-                        <option value="4">Anemone</option>
-                        <option value="5">Logistic</option>
-                        <option value="6">Anisotropic</option>
-                        <option value="7">Oregonator</option>
-                        <option value="8">Blink</option>
-                        <option value="9">Mini Spouts</option>
-                        <option value="10">Chaotic Spouts</option>
-                    </select>
-                </form>
-                <p style="text-align:center">
-                    <button id="btn_clear" onclick="clean()">Reset</button>
-                    <button id="btn_snapshot" onclick="snapshot()">Take snapshot</button>
-                <p/>
-                <h4 class="unsafe">Advanced settings</h4>
-                Curl feed:
-                <span class="remark" id="curl"></span><br/>
-                <div id="sld_curl" class="slider"></div>
-                
-                Flux feed:
-                <span class ="remark" id="flux"></span><br/>
-                <div id="sld_flux" class="slider"></div>
-
-                Divergence feed:
-                <span class ="remark" id="divergence"></span><br/>
-                <div id="sld_divergence" class="slider"></div>
-
-                Laplacian feed:
-                <span class ="remark" id="laplacian"></span><br/>
-                <div id="sld_laplacian" class="slider"></div>
-
-                Feedback amplification:
-                <span class ="remark" id="feedback"></span><br/>
-                <div id="sld_feedback" class="slider"></div>
-
-                Curl exponent:
-                <span class ="remark" id="exponent"></span><br/>
-                <div id="sld_exponent" class="slider"></div>
-
-                Timesteps per render:
-                <span class="remark" id="timesteps"></span><br/>
-                <div id="sld_timesteps" class="slider"></div>
-
-                Color:
-                <input class="color" style=""></input>
-
-                <div style="font-size:x-small">Share (paste and press enter):</div>
-                <div style="text-align:center"><input id="share" style="width:85%"/></div>
-            </section>
-        </aside>
+            <canvas id="myCanvas" class="viewer" style="width:1400px;height:1024px"></canvas>
         </div>
         <footer>
                 <div id="copyright">

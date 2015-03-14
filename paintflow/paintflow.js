@@ -215,8 +215,8 @@ var mGSMaterial, mStatMaterial, mScreenMaterial;
         canvasWidth = canvasQ.width();
         canvasHeight = canvasQ.height();
 
-        var textureWidth = canvasWidth/2;
-        var textureHeight = canvasHeight/2;
+        var textureWidth = width/2;
+        var textureHeight = height/2;
 
         mRenderer.setSize(canvasWidth, canvasHeight);
 
