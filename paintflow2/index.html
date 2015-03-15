@@ -2,7 +2,7 @@
 <html>
     <head>
         <title>PaintFlow</title>
-        <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
+        <link rel="stylesheet" type="text/css" href="../css/paintflow.css"/>
         <script type="text/javascript" src="../3rd/three.js"></script>
         <script type="text/javascript" src="../3rd/dat.gui.js"></script>
         <script type="text/javascript" src="../3rd/jquery-1.11.2.min.js"></script>
@@ -36,6 +36,7 @@
             uniform float feedf;
             uniform float expf;
             uniform vec2 brush;
+            uniform float brushsize;
 
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
@@ -113,11 +114,9 @@
                 {
                     vec2 diff = (vUv - brush) / texel;
                     float dist = sqrt(dot(diff, diff));
-                    const float maxDist = 50.0;
-                    if(dist < maxDist) {
-                        a = diff.x / maxDist;
-                        b = diff.y / maxDist;
-                        //div = 0.1 + 2.0 * div;
+                    if(dist < brushsize) {
+                        a = diff.x / brushsize;
+                        b = diff.y / brushsize;
                     }
                 }
 
@@ -144,6 +143,7 @@
             uniform sampler2D tSource;
             uniform sampler2D sSource;
             uniform vec2 brush;
+            uniform float brushsize;
             uniform vec4 color;
 
             float step_x = 1.0/screenWidth;
@@ -158,17 +158,6 @@
             vec2 sw = vec2(-step_x, -step_y);
             vec2 w  = vec2(-step_x, 0.0);
             vec2 nw = vec2(-step_x, step_y);
-
-            /*
-            vec2 s  = vec2(0.0, step_y);
-            vec2 se = vec2(step_x, step_y);
-            vec2 e  = vec2(step_x, 0.0);
-            vec2 ne = vec2(step_x, -step_y);
-            vec2 n  = vec2(0.0, -step_y);
-            vec2 nw = vec2(-step_x, -step_y);
-            vec2 w  = vec2(-step_x, 0.0);
-            vec2 sw = vec2(-step_x, step_y);
-            */
 
             vec4 reflectance(vec4 absorption) {
                 return vec4(1.0) + absorption - sqrt(pow(absorption, vec4(2.0)) + (2.0 * absorption));
@@ -186,6 +175,7 @@
             float mixWeight(float x, float y) {
                 vec2 n = normalize(vec2(x, y));
                 return max(0.0, MIX_SCALE * (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * (n.x + n.y)/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
+                //return max(0.0, MIX_SCALE * sign(x + y) * (x*x + y*y));
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
@@ -282,16 +272,21 @@
                 vec4 e1 = vec4(e_ne, e_nw, e_se, e_sw);
                 vec4 f0 = vec4(f_e, f_w, f_n, f_s);
                 vec4 f1 = vec4(f_ne, f_nw, f_se, f_sw);
-                vec4 n0 = vec4(a_e, -a_w, b_n, -b_s);
+                /*vec4 n0 = vec4(a_e, -a_w, b_n, -b_s);
                 vec4 n1 = SQRT_2_OVER_2 * vec4(a_ne + b_ne, - a_nw + b_nw, a_se - b_se, - a_sw - b_sw);
                 vec4 m0 = vec4(a, -a, b, -b);
-                vec4 m1 = SQRT_2_OVER_2 * vec4(a + b, - a + b, a - b, - a - b);
+                vec4 m1 = SQRT_2_OVER_2 * vec4(a + b, - a + b, a - b, - a - b);*/
+
+                vec4 n0 = vec4(-a_e, a_w, -b_n, b_s);
+                vec4 n1 = SQRT_2_OVER_2 * vec4(- a_ne - b_ne,  a_nw - b_nw, - a_se + b_se, a_sw + b_sw);
+                vec4 m0 = vec4(-a, a, -b, b);
+                vec4 m1 = SQRT_2_OVER_2 * vec4(- a - b, a - b, - a + b, a + b);
 
                 if(brush.x > 0.0)
                 {
                     vec2 diff = (vUv - brush) / texel;
                     float dist = sqrt(dot(diff, diff));
-                    if(dist < 50.0) {
+                    if(dist < brushsize) {
                         gl_FragColor = color;
                         return;
                     }
@@ -327,29 +322,8 @@
         <meta charset="UTF-8">
     </head>
     <body>
-        <header>
-            <h1>PaintFlow</h1>
-        </header>
         <div id="simulation">
             <canvas id="myCanvas" class="viewer" style="width:1400px;height:1024px"></canvas>
-        </div>
-        <footer>
-                <div id="copyright">
-                    "Smoke" &copy;2014 <a href="https://twitter.com/cornusammonis">@cornusammonis</a>
-                    <a href="https://github.com/CornuAmmonis/jsexp">Github</a><br>
-                    Forked from "Reaction diffusion system (Gray-Scott model)"
-                    &copy;2012
-                    <a href="https://twitter.com/pmneila">@pmneila</a>
-                    <a href="https://github.com/pmneila/jsexp">Github</a>
-                    <a id="notworking" href="#">Not working?</a>
-                </div>
-        </footer>
-        
-        <div id="requirement_dialog" title="Requirements">
-            <p>This simulation requires the GL extensions framebuffer_object and texture_float.
-            If you cannot see the simulation your system probably lacks at least one of these extensions.</p>
-            
-            <p>In Google Chrome, you can see the available GL extensions going to chrome://gpu.</p>
         </div>
     </body>
 </html>

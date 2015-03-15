@@ -1,6 +1,5 @@
 var PaintFlow = function(){
 
-    // Canvas.
     this.canvas = undefined;
     this.canvasQ = undefined;
     this.canvasWidth = undefined;
@@ -13,20 +12,6 @@ var PaintFlow = function(){
     this.mRenderer = undefined;
     this.mScene = undefined;
     this.mCamera = undefined;
-    this.mUniforms = {
-        screenWidth: {type: "f", value: undefined},
-        screenHeight: {type: "f", value: undefined},
-        tSource: {type: "t", value: undefined},
-        sSource: {type: "t", value: undefined},
-        curlf: {type: "f", value: this.curlf},
-        fluxf: {type: "f", value: this.fluxf},
-        divf:  {type: "f", value: this.divf},
-        lapf:  {type: "f", value: this.lapf},
-        feedf: {type: "f", value: this.feedf},
-        expf:  {type: "f", value: this.expf},
-        brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
-        color: {type: "v4", value: new THREE.Vector4(1, 1, 1, 0)}
-    };
     
     this.mStep = 0 >>> 0; // coerce to uint32
     this.uiThree = 3 >>> 0;
@@ -66,7 +51,26 @@ var PaintFlow = function(){
     this.lapf  = this.presets[0].lapf;
     this.feedf = this.presets[0].feedf;
     this.expf  = this.presets[0].expf;
+    this.brushsize  = 50.0;
+    this.brushtype  = 0;
     this.timesteps = 2;
+
+    this.mUniforms = {
+        screenWidth: {type: "f", value: undefined},
+        screenHeight: {type: "f", value: undefined},
+        tSource: {type: "t", value: undefined},
+        sSource: {type: "t", value: undefined},
+        curlf: {type: "f", value: this.curlf},
+        fluxf: {type: "f", value: this.fluxf},
+        divf:  {type: "f", value: this.divf},
+        lapf:  {type: "f", value: this.lapf},
+        feedf: {type: "f", value: this.feedf},
+        expf:  {type: "f", value: this.expf},
+        brushsize: {type: "f", value: this.brushsize},
+        brushtype: {type: "i", value: this.brushtype},
+        brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
+        color: {type: "v4", value: new THREE.Vector4(1, 1, 1, 0)}
+    };
 
     this.init = function()
     {
@@ -82,6 +86,8 @@ var PaintFlow = function(){
         this.canvas.onmousedown = this.onMouseDown.bind(this);
         this.canvas.onmouseup   = this.onMouseUp.bind(this);
         this.canvas.onmousemove = this.onMouseMove.bind(this);
+
+        window.addEventListener( 'resize', this.onResize.bind(this), false );
     };
 
     this.initGl = function()
@@ -119,8 +125,8 @@ var PaintFlow = function(){
         this.mScene.add(this.mScreenQuad);
 
         // Set the new shape of canvas.
-        this.canvasQ.width(this.canvas.clientWidth);
-        this.canvasQ.height(this.canvas.clientHeight);
+        this.canvasQ.width(this.getCanvasWidth());
+        this.canvasQ.height(this.getCanvasHeight());
 
         // Get the real size of canvas.
         this.canvasWidth = this.canvasQ.width();
@@ -136,8 +142,6 @@ var PaintFlow = function(){
         this.mUniforms.screenHeight.value = this.textureHeight;
         this.mUniforms.brush.value = new THREE.Vector2(0.5, 0.5);
 
-        //this.render(0);
-        //requestAnimationFrame(this.render);
     };
 
     this.getWrappedRenderTarget = function() {
@@ -158,6 +162,8 @@ var PaintFlow = function(){
         this.mUniforms.lapf.value  = this.lapf;
         this.mUniforms.feedf.value = this.feedf;
         this.mUniforms.expf.value  = this.expf;
+        this.mUniforms.brushsize.value  = this.brushsize;
+        this.mUniforms.brushtype.value  = this.brushtype;
         this.mUniforms.color.value = new THREE.Vector4(
             this.paintcolor[0] / 255.0,
             this.paintcolor[1] / 255.0,
@@ -249,6 +255,31 @@ var PaintFlow = function(){
         this.mMouseDown = false;
     };
 
+    this.onResize = function()
+    {
+
+        // Set the new shape of canvas.
+        this.canvasQ.width(this.getCanvasWidth());
+        this.canvasQ.height(this.getCanvasHeight());
+
+        // Get the real size of canvas.
+        this.canvasWidth = this.canvasQ.width();
+        this.canvasHeight = this.canvasQ.height();
+
+        this.mRenderer.setSize(this.canvasWidth, this.canvasHeight);
+
+    };
+
+    this.getCanvasWidth = function()
+    {
+        return window.innerWidth;
+    };
+
+    this.getCanvasHeight = function()
+    {
+        return window.innerHeight;
+    };
+
 };
 
 
@@ -256,16 +287,18 @@ window.onload = function() {
     var paintFlow = new PaintFlow();
     var gui = new dat.GUI();
 
-    gui.add(paintFlow, 'curlf').min(0.01).max(0.512).step(0.001);
-    gui.add(paintFlow, 'fluxf').min(0.085).max(0.512).step(0.001);
-    gui.add(paintFlow, 'divf').min(-0.1).max(0.1).step(0.001);
-    gui.add(paintFlow, 'lapf').min(-0.1).max(0.1).step(0.001);
-    gui.add(paintFlow, 'feedf').min(0.9998).max(1.01).step(0.001);
-    gui.add(paintFlow, 'expf').min(0.01).max(2.0).step(0.01);
-    gui.add(paintFlow, 'timesteps').min(0).max(32).step(1);
-    gui.addColor(paintFlow, 'paintcolor');
-    gui.add(paintFlow, 'snapshot');
-    gui.add(paintFlow, 'debug');
+    gui.add(paintFlow, 'curlf').min(0.01).max(0.512).step(0.001).name("Curl");
+    gui.add(paintFlow, 'fluxf').min(0.085).max(0.512).step(0.001).name("Flux");
+    gui.add(paintFlow, 'divf').min(-0.1).max(0.1).step(0.001).name("Divergence");
+    gui.add(paintFlow, 'lapf').min(-0.1).max(0.1).step(0.001).name("Laplacian");
+    gui.add(paintFlow, 'feedf').min(0.9998).max(1.01).step(0.001).name("Amplification");
+    gui.add(paintFlow, 'expf').min(0.01).max(2.0).step(0.01).name("Curl Exponent");
+    gui.add(paintFlow, 'timesteps').min(0).max(32).step(1).name("Speed");
+    gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
+    gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
+    gui.add(paintFlow, 'brushtype').min(0).max(2).step(1).name("Brush Type");
+    gui.add(paintFlow, 'snapshot').name("Screenshot");
+    gui.add(paintFlow, 'debug').name("Debug View");
 
     paintFlow.init();
     paintFlow.render();

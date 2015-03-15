@@ -1,0 +1,36 @@
+
+body {
+    font-family:sans-serif;
+    background:#333333;
+    color:#777777;
+    margin: 0 auto;
+}
+
+header, footer, aside, nav {
+    display: block;
+}
+
+a:link {color:#777777;}
+a:visited {color:#777777;}
+a:hover {color:#999999;}
+a:active {color:#ffffff;}
+
+#copyright {
+    font-size:8pt;
+    text-align:center;
+    margin-top:10px;
+}
+
+.remark {
+    color: #ffffff;
+}
+
+.unsafe {
+    color : #c86464;
+}
+
+#myCanvas {
+    display:block;
+    vertical-align:bottom;
+    background-color:#000000;
+}
