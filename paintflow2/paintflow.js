@@ -26,6 +26,8 @@ var PaintFlow = function(){
     this.paintMaterial = undefined;
     this.debugScreenMaterial = undefined;
 
+    this.image = undefined;
+
     this.textureWidth = 512;
     this.textureHeight = 512;
 
@@ -40,7 +42,8 @@ var PaintFlow = function(){
             divf:  0,
             lapf:  0.04,
             feedf: 1.001,
-            expf:  0.2
+            expf:  0.2,
+            mixf:  0.05
         }
     ];
 
@@ -51,6 +54,7 @@ var PaintFlow = function(){
     this.lapf  = this.presets[0].lapf;
     this.feedf = this.presets[0].feedf;
     this.expf  = this.presets[0].expf;
+    this.mixf  = this.presets[0].mixf;
     this.brushsize  = 50.0;
     this.brushtype  = 0;
     this.timesteps = 2;
@@ -60,6 +64,9 @@ var PaintFlow = function(){
         screenHeight: {type: "f", value: undefined},
         tSource: {type: "t", value: undefined},
         sSource: {type: "t", value: undefined},
+        iSource: {type: "t", value: undefined},
+        loadImage: {type: "f", value: 1.0},
+        mixf:  {type: "f", value: this.mixf},
         curlf: {type: "f", value: this.curlf},
         fluxf: {type: "f", value: this.fluxf},
         divf:  {type: "f", value: this.divf},
@@ -72,10 +79,17 @@ var PaintFlow = function(){
         color: {type: "v4", value: new THREE.Vector4(1, 1, 1, 0)}
     };
 
+    this.load = function()
+    {
+        this.image = THREE.ImageUtils.loadTexture('clicktopaint.png', THREE.UVMapping, this.init.bind(this))
+    };
+
     this.init = function()
     {
+        this.mUniforms.iSource.value = this.image;
         this.initCanvas();
         this.initGl();
+        this.render();
     };
 
     this.initCanvas = function()
@@ -92,6 +106,7 @@ var PaintFlow = function(){
 
     this.initGl = function()
     {
+        this.image = THREE.ImageUtils.loadTexture('clicktopaint.png');
         this.mRenderer = new THREE.WebGLRenderer({canvas: this.canvas, preserveDrawingBuffer: true});
 
         this.mScene = new THREE.Scene();
@@ -140,11 +155,11 @@ var PaintFlow = function(){
 
         this.mUniforms.screenWidth.value = this.textureWidth;
         this.mUniforms.screenHeight.value = this.textureHeight;
-        this.mUniforms.brush.value = new THREE.Vector2(0.5, 0.5);
+        this.mUniforms.brush.value = this.mMinusOnes;
 
     };
 
-    this.getWrappedRenderTarget = function() {
+    this.getWrappedRenderTarget = function(initImage) {
         return new THREE.WebGLRenderTarget(this.textureWidth, this.textureHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
@@ -162,6 +177,7 @@ var PaintFlow = function(){
         this.mUniforms.lapf.value  = this.lapf;
         this.mUniforms.feedf.value = this.feedf;
         this.mUniforms.expf.value  = this.expf;
+        this.mUniforms.mixf.value  = this.mixf;
         this.mUniforms.brushsize.value  = this.brushsize;
         this.mUniforms.brushtype.value  = this.brushtype;
         this.mUniforms.color.value = new THREE.Vector4(
@@ -216,7 +232,7 @@ var PaintFlow = function(){
 
         this.mScreenQuad.material = this.screenMaterial;
         this.mRenderer.render(this.mScene, this.mCamera);
-
+        this.mUniforms.loadImage.value = 0.0;
         requestAnimationFrame(this.render.bind(this));
     };
 
@@ -287,6 +303,9 @@ window.onload = function() {
     var paintFlow = new PaintFlow();
     var gui = new dat.GUI();
 
+    gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
+    gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
+    gui.add(paintFlow, 'mixf').min(0.0).max(1.0).step(0.001).name("Mixing");
     gui.add(paintFlow, 'curlf').min(0.01).max(0.512).step(0.001).name("Curl");
     gui.add(paintFlow, 'fluxf').min(0.085).max(0.512).step(0.001).name("Flux");
     gui.add(paintFlow, 'divf').min(-0.1).max(0.1).step(0.001).name("Divergence");
@@ -294,12 +313,10 @@ window.onload = function() {
     gui.add(paintFlow, 'feedf').min(0.9998).max(1.01).step(0.001).name("Amplification");
     gui.add(paintFlow, 'expf').min(0.01).max(2.0).step(0.01).name("Curl Exponent");
     gui.add(paintFlow, 'timesteps').min(0).max(32).step(1).name("Speed");
-    gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
-    gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
+
     gui.add(paintFlow, 'snapshot').name("Screenshot");
     gui.add(paintFlow, 'debug').name("Debug View");
     gui.remember(paintFlow);
 
-    paintFlow.init();
-    paintFlow.render();
+    paintFlow.load();
 };

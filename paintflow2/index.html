@@ -133,14 +133,16 @@
         <script type="x-shader/x-fragment" id="paintFragmentShader">
             #define SQRT_2 1.41421356237
             #define SQRT_2_OVER_2 0.70710678118
-            #define MIX_SCALE 0.1
             #define CUTOFF 0.0001
 
             varying vec2 vUv;
             uniform float screenWidth;
             uniform float screenHeight;
+            uniform float loadImage;
+            uniform float mixf;
             uniform sampler2D tSource;
             uniform sampler2D sSource;
+            uniform sampler2D iSource;
             uniform vec2 brush;
             uniform float brushsize;
             uniform vec4 color;
@@ -173,15 +175,18 @@
 
             float mixWeight(float x, float y) {
                 vec2 n = normalize(vec2(x, y));
-                return max(0.0, MIX_SCALE * (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * (n.x + n.y)/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
-                //return max(0.0, MIX_SCALE * sign(x + y) * (x*x + y*y));
+                float t = max(0.0, n.x + n.y);
+                float xm = max(0.0, n.x);
+                float ym = max(0.0, n.y);
+                //return max(0.0, mixf* (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * t/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
+                return max(0.0, mixf * sqrt(xm*ym));
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
                 return 0.125 * (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7);
             }
 
-             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3) {
+            vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3) {
                 return 0.25 * (v0 + v1 + v2 + v3);
             }
 
@@ -216,99 +221,61 @@
                 return reflectance(rgbAvg);
             }
 
-            /*vec4 mixNeighbors(float d, float e, float f, vec4 n0, vec4 n1, vec4 m0, vec4 m1, vec4 d0, vec4 d1, vec4 e0, vec4 e1, vec4 f0, vec4 f1) {
-                vec4 rgbC = absorbance(d, e, f);
-                //vec4 rgb0 = absorbance(d0.x, e0.x, f0.x);
-                //vec4 rgb1 = absorbance(d0.y, e0.y, f0.y);
-                //vec4 rgb2 = absorbance(d0.z, e0.z, f0.z);
-                //vec4 rgb3 = absorbance(d0.w, e0.w, f0.w);
-                vec4 rgb4 = absorbance(d1.x, e1.x, f1.x);
-                vec4 rgb5 = absorbance(d1.y, e1.y, f1.y);
-                vec4 rgb6 = absorbance(d1.z, e1.z, f1.z);
-                vec4 rgb7 = absorbance(d1.w, e1.w, f1.w);
-                //float mw0 = mixWeight(m0.x, n0.x);
-                //float mw1 = mixWeight(m0.y, n0.y);
-                //float mw2 = mixWeight(m0.z, n0.z);
-                //float mw3 = mixWeight(m0.w, n0.w);
-                float mw4 = mixWeight(m1.x, n1.x);
-                float mw5 = mixWeight(m1.y, n1.y);
-                float mw6 = mixWeight(m1.z, n1.z);
-                float mw7 = mixWeight(m1.w, n1.w);
-                //vec4 mx0 = mixAbs(rgb0, rgbC, mw0);
-                //vec4 mx1 = mixAbs(rgb1, rgbC, mw1);
-                //vec4 mx2 = mixAbs(rgb2, rgbC, mw2);
-                //vec4 mx3 = mixAbs(rgb3, rgbC, mw3);
-                vec4 mx4 = mixAbs(rgb4, rgbC, mw4);
-                vec4 mx5 = mixAbs(rgb5, rgbC, mw5);
-                vec4 mx6 = mixAbs(rgb6, rgbC, mw6);
-                vec4 mx7 = mixAbs(rgb7, rgbC, mw7);
-                vec4 rgbAvg = vectorAvg(mx4, mx5, mx6, mx7);
-                return reflectance(rgbAvg);
-            }*/
-
             void main()
             {
+                if (loadImage > 0.0) {
+                    gl_FragColor = texture2D(iSource, vUv);
+                    return;
+                }
                 float a = texture2D(tSource, vUv).x;
                 float b = texture2D(tSource, vUv).y;
                 float d = texture2D(sSource, vUv).x;
                 float e = texture2D(sSource, vUv).y;
                 float f = texture2D(sSource, vUv).z;
 
-                float a_n =  texture2D(tSource, vUv+n ).x;
-                float a_e =  texture2D(tSource, vUv+e ).x;
-                float a_s =  texture2D(tSource, vUv+s ).x;
-                float a_w =  texture2D(tSource, vUv+w ).x;
-                float a_nw = texture2D(tSource, vUv+nw).x;
-                float a_sw = texture2D(tSource, vUv+sw).x;
-                float a_ne = texture2D(tSource, vUv+ne).x;
-                float a_se = texture2D(tSource, vUv+se).x;
+                vec2 ab_n =  texture2D(tSource, vUv+n ).xy;
+                vec2 ab_e =  texture2D(tSource, vUv+e ).xy;
+                vec2 ab_s =  texture2D(tSource, vUv+s ).xy;
+                vec2 ab_w =  texture2D(tSource, vUv+w ).xy;
+                vec2 ab_nw = texture2D(tSource, vUv+nw).xy;
+                vec2 ab_sw = texture2D(tSource, vUv+sw).xy;
+                vec2 ab_ne = texture2D(tSource, vUv+ne).xy;
+                vec2 ab_se = texture2D(tSource, vUv+se).xy;
 
-                float b_n =  texture2D(tSource, vUv+n ).y;
-                float b_e =  texture2D(tSource, vUv+e ).y;
-                float b_s =  texture2D(tSource, vUv+s ).y;
-                float b_w =  texture2D(tSource, vUv+w ).y;
-                float b_nw = texture2D(tSource, vUv+nw).y;
-                float b_sw = texture2D(tSource, vUv+sw).y;
-                float b_ne = texture2D(tSource, vUv+ne).y;
-                float b_se = texture2D(tSource, vUv+se).y;
+                vec3 def_n =  texture2D(sSource, vUv+n ).xyz;
+                vec3 def_e =  texture2D(sSource, vUv+e ).xyz;
+                vec3 def_s =  texture2D(sSource, vUv+s ).xyz;
+                vec3 def_w =  texture2D(sSource, vUv+w ).xyz;
+                vec3 def_nw = texture2D(sSource, vUv+nw).xyz;
+                vec3 def_sw = texture2D(sSource, vUv+sw).xyz;
+                vec3 def_ne = texture2D(sSource, vUv+ne).xyz;
+                vec3 def_se = texture2D(sSource, vUv+se).xyz;
 
-                float d_n =  texture2D(sSource, vUv+n ).x;
-                float d_e =  texture2D(sSource, vUv+e ).x;
-                float d_s =  texture2D(sSource, vUv+s ).x;
-                float d_w =  texture2D(sSource, vUv+w ).x;
-                float d_nw = texture2D(sSource, vUv+nw).x;
-                float d_sw = texture2D(sSource, vUv+sw).x;
-                float d_ne = texture2D(sSource, vUv+ne).x;
-                float d_se = texture2D(sSource, vUv+se).x;
+                vec4 d0 = vec4(def_e.x, def_w.x, def_n.x, def_s.x);
+                vec4 d1 = vec4(def_ne.x, def_nw.x, def_se.x, def_sw.x);
+                vec4 e0 = vec4(def_e.y, def_w.y, def_n.y, def_s.y);
+                vec4 e1 = vec4(def_ne.y, def_nw.y, def_se.y, def_sw.y);
+                vec4 f0 = vec4(def_e.z, def_w.z, def_n.z, def_s.z);
+                vec4 f1 = vec4(def_ne.z, def_nw.z, def_se.z, def_sw.z);
 
-                float e_n =  texture2D(sSource, vUv+n ).y;
-                float e_e =  texture2D(sSource, vUv+e ).y;
-                float e_s =  texture2D(sSource, vUv+s ).y;
-                float e_w =  texture2D(sSource, vUv+w ).y;
-                float e_nw = texture2D(sSource, vUv+nw).y;
-                float e_sw = texture2D(sSource, vUv+sw).y;
-                float e_ne = texture2D(sSource, vUv+ne).y;
-                float e_se = texture2D(sSource, vUv+se).y;
+                /*vec4 n0 = vec4(- ab_e.x, ab_w.x, - ab_n.y, ab_s.y);
+                vec4 n1 = vec4(- ab_ne.x - ab_ne.y,  ab_nw.x - ab_nw.y, - ab_se.x + ab_se.y, ab_sw.x + ab_sw.y);
+                vec4 m0 = vec4(- a, a, - b, b);
+                vec4 m1 = vec4(- a - b, a - b, - a + b, a + b);*/
 
-                float f_n =  texture2D(sSource, vUv+n ).z;
-                float f_e =  texture2D(sSource, vUv+e ).z;
-                float f_s =  texture2D(sSource, vUv+s ).z;
-                float f_w =  texture2D(sSource, vUv+w ).z;
-                float f_nw = texture2D(sSource, vUv+nw).z;
-                float f_sw = texture2D(sSource, vUv+sw).z;
-                float f_ne = texture2D(sSource, vUv+ne).z;
-                float f_se = texture2D(sSource, vUv+se).z;
-
-                vec4 d0 = vec4(d_e, d_w, d_n, d_s);
-                vec4 d1 = vec4(d_ne, d_nw, d_se, d_sw);
-                vec4 e0 = vec4(e_e, e_w, e_n, e_s);
-                vec4 e1 = vec4(e_ne, e_nw, e_se, e_sw);
-                vec4 f0 = vec4(f_e, f_w, f_n, f_s);
-                vec4 f1 = vec4(f_ne, f_nw, f_se, f_sw);
-
-                vec4 n0 = vec4(- a_e, a_w, - b_n, b_s);
-                vec4 n1 = vec4(- a_ne - b_ne,  a_nw - b_nw, - a_se + b_se, a_sw + b_sw);
-                vec4 m0 = vec4(- a, a, -b, b);
+                vec4 n0 = vec4(
+                    - ab_e.x - ab_ne.x - ab_se.x,
+                      ab_w.x + ab_nw.x + ab_sw.x,
+                    - ab_n.y - ab_ne.y - ab_nw.y,
+                      ab_s.y + ab_sw.y + ab_se.y
+                );
+                vec4 n1 = vec4(- ab_ne.x - ab_ne.y,  ab_nw.x - ab_nw.y, - ab_se.x + ab_se.y, ab_sw.x + ab_sw.y);
+                vec4 m0 = vec4(
+                    - ab_w.x - ab_nw.x - ab_sw.x,
+                      ab_e.x + ab_ne.x + ab_se.x,
+                    - ab_s.y - ab_se.y - ab_sw.y,
+                      ab_n.y + ab_nw.y + ab_ne.y
+                );
                 vec4 m1 = vec4(- a - b, a - b, - a + b, a + b);
 
                 if(brush.x > 0.0)
