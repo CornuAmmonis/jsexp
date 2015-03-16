@@ -296,9 +296,9 @@ window.onload = function() {
     gui.add(paintFlow, 'timesteps').min(0).max(32).step(1).name("Speed");
     gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
     gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
-    gui.add(paintFlow, 'brushtype').min(0).max(2).step(1).name("Brush Type");
     gui.add(paintFlow, 'snapshot').name("Screenshot");
     gui.add(paintFlow, 'debug').name("Debug View");
+    gui.remember(paintFlow);
 
     paintFlow.init();
     paintFlow.render();

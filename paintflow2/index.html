@@ -134,7 +134,6 @@
             #define SQRT_2 1.41421356237
             #define SQRT_2_OVER_2 0.70710678118
             #define MIX_SCALE 0.1
-            #define ONE_OVER_8 0.125
             #define CUTOFF 0.0001
 
             varying vec2 vUv;
@@ -179,7 +178,11 @@
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
-                return ONE_OVER_8 * (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7);
+                return 0.125 * (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7);
+            }
+
+             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3) {
+                return 0.25 * (v0 + v1 + v2 + v3);
             }
 
             //packed e, w, n, s / ne, nw, se, sw
@@ -212,6 +215,36 @@
                 vec4 rgbAvg = vectorAvg(mx0, mx1, mx2, mx3, mx4, mx5, mx6, mx7);
                 return reflectance(rgbAvg);
             }
+
+            /*vec4 mixNeighbors(float d, float e, float f, vec4 n0, vec4 n1, vec4 m0, vec4 m1, vec4 d0, vec4 d1, vec4 e0, vec4 e1, vec4 f0, vec4 f1) {
+                vec4 rgbC = absorbance(d, e, f);
+                //vec4 rgb0 = absorbance(d0.x, e0.x, f0.x);
+                //vec4 rgb1 = absorbance(d0.y, e0.y, f0.y);
+                //vec4 rgb2 = absorbance(d0.z, e0.z, f0.z);
+                //vec4 rgb3 = absorbance(d0.w, e0.w, f0.w);
+                vec4 rgb4 = absorbance(d1.x, e1.x, f1.x);
+                vec4 rgb5 = absorbance(d1.y, e1.y, f1.y);
+                vec4 rgb6 = absorbance(d1.z, e1.z, f1.z);
+                vec4 rgb7 = absorbance(d1.w, e1.w, f1.w);
+                //float mw0 = mixWeight(m0.x, n0.x);
+                //float mw1 = mixWeight(m0.y, n0.y);
+                //float mw2 = mixWeight(m0.z, n0.z);
+                //float mw3 = mixWeight(m0.w, n0.w);
+                float mw4 = mixWeight(m1.x, n1.x);
+                float mw5 = mixWeight(m1.y, n1.y);
+                float mw6 = mixWeight(m1.z, n1.z);
+                float mw7 = mixWeight(m1.w, n1.w);
+                //vec4 mx0 = mixAbs(rgb0, rgbC, mw0);
+                //vec4 mx1 = mixAbs(rgb1, rgbC, mw1);
+                //vec4 mx2 = mixAbs(rgb2, rgbC, mw2);
+                //vec4 mx3 = mixAbs(rgb3, rgbC, mw3);
+                vec4 mx4 = mixAbs(rgb4, rgbC, mw4);
+                vec4 mx5 = mixAbs(rgb5, rgbC, mw5);
+                vec4 mx6 = mixAbs(rgb6, rgbC, mw6);
+                vec4 mx7 = mixAbs(rgb7, rgbC, mw7);
+                vec4 rgbAvg = vectorAvg(mx4, mx5, mx6, mx7);
+                return reflectance(rgbAvg);
+            }*/
 
             void main()
             {
@@ -272,15 +305,11 @@
                 vec4 e1 = vec4(e_ne, e_nw, e_se, e_sw);
                 vec4 f0 = vec4(f_e, f_w, f_n, f_s);
                 vec4 f1 = vec4(f_ne, f_nw, f_se, f_sw);
-                /*vec4 n0 = vec4(a_e, -a_w, b_n, -b_s);
-                vec4 n1 = SQRT_2_OVER_2 * vec4(a_ne + b_ne, - a_nw + b_nw, a_se - b_se, - a_sw - b_sw);
-                vec4 m0 = vec4(a, -a, b, -b);
-                vec4 m1 = SQRT_2_OVER_2 * vec4(a + b, - a + b, a - b, - a - b);*/
 
-                vec4 n0 = vec4(-a_e, a_w, -b_n, b_s);
-                vec4 n1 = SQRT_2_OVER_2 * vec4(- a_ne - b_ne,  a_nw - b_nw, - a_se + b_se, a_sw + b_sw);
-                vec4 m0 = vec4(-a, a, -b, b);
-                vec4 m1 = SQRT_2_OVER_2 * vec4(- a - b, a - b, - a + b, a + b);
+                vec4 n0 = vec4(- a_e, a_w, - b_n, b_s);
+                vec4 n1 = vec4(- a_ne - b_ne,  a_nw - b_nw, - a_se + b_se, a_sw + b_sw);
+                vec4 m0 = vec4(- a, a, -b, b);
+                vec4 m1 = vec4(- a - b, a - b, - a + b, a + b);
 
                 if(brush.x > 0.0)
                 {
