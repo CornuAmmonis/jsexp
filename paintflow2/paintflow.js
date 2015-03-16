@@ -31,7 +31,7 @@ var PaintFlow = function(){
     this.textureWidth = 512;
     this.textureHeight = 512;
 
-    this.paintcolor = [255, 255, 255];
+    this.paintcolor = [150, 0, 0];
 
     this.mMinusOnes = new THREE.Vector2(-1, -1);
 
@@ -79,7 +79,7 @@ var PaintFlow = function(){
         brushsize: {type: "f", value: this.brushsize},
         brushtype: {type: "i", value: this.brushtype},
         brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
-        color: {type: "v4", value: new THREE.Vector4(1, 1, 1, 0)}
+        color: {type: "v4", value: new THREE.Vector4(0.588, 0, 0, 0)}
     };
 
     this.load = function()
