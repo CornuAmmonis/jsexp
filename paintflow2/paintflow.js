@@ -326,7 +326,7 @@ window.onload = function() {
     gui.add(paintFlow, 'timesteps').min(0).max(32).step(1).name("Speed");
 
     gui.add(paintFlow, 'snapshot').name("Screenshot");
-    gui.add(paintFlow, 'debug').name("Debug View");
+    gui.add(paintFlow, 'debug').name("Fluid View");
     gui.remember(paintFlow);
 
     paintFlow.load();
