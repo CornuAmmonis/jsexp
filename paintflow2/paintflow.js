@@ -31,7 +31,7 @@ var PaintFlow = function(){
     this.textureWidth = 512;
     this.textureHeight = 512;
 
-    this.paintcolor = [150, 0, 0];
+    this.paintcolor = "#980000";
 
     this.mMinusOnes = new THREE.Vector2(-1, -1);
 
@@ -190,10 +190,11 @@ var PaintFlow = function(){
         }
         this.mUniforms.brushsize.value  = this.brushsize;
         this.mUniforms.brushtype.value  = this.brushtype;
+        var color = this.parseColorString(this.paintcolor);
         this.mUniforms.color.value = new THREE.Vector4(
-            this.paintcolor[0] / 255.0,
-            this.paintcolor[1] / 255.0,
-            this.paintcolor[2] / 255.0,
+            color[0] / 255.0,
+            color[1] / 255.0,
+            color[2] / 255.0,
             0.0
         );
 
@@ -305,6 +306,19 @@ var PaintFlow = function(){
     {
         return window.innerHeight;
     };
+
+    this.parseColorString = function(colorString) {
+        m = colorString.match(/^#([0-9a-f]{6})$/i)[1];
+        if( m ) {
+            return [
+                parseInt(m.substr(0,2),16),
+                parseInt(m.substr(2,2),16),
+                parseInt(m.substr(4,2),16)
+            ];
+        } else {
+            return [255, 255, 255];
+        }
+    }
 
 };
 
