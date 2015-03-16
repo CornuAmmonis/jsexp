@@ -140,6 +140,7 @@
             uniform float screenHeight;
             uniform float loadImage;
             uniform float mixf;
+            uniform float offf;
             uniform sampler2D tSource;
             uniform sampler2D sSource;
             uniform sampler2D iSource;
@@ -150,7 +151,6 @@
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
             vec2 texel = vec2(step_x, step_y);
-
             vec2 n  = vec2(0.0, step_y);
             vec2 ne = vec2(step_x, step_y);
             vec2 e  = vec2(step_x, 0.0);
@@ -174,12 +174,9 @@
             }
 
             float mixWeight(float x, float y) {
-                vec2 n = normalize(vec2(x, y));
-                float t = max(0.0, n.x + n.y);
-                float xm = max(0.0, n.x);
-                float ym = max(0.0, n.y);
+                vec2 n = max(vec2(0.0), normalize(vec2(x, y)));
                 //return max(0.0, mixf* (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * t/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
-                return max(0.0, mixf * sqrt(xm*ym));
+                return min(mixf * sqrt(n.x*n.y), 1.0);
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
@@ -227,29 +224,47 @@
                     gl_FragColor = texture2D(iSource, vUv);
                     return;
                 }
-                float a = texture2D(tSource, vUv).x;
-                float b = texture2D(tSource, vUv).y;
-                float d = texture2D(sSource, vUv).x;
-                float e = texture2D(sSource, vUv).y;
-                float f = texture2D(sSource, vUv).z;
 
-                vec2 ab_n =  texture2D(tSource, vUv+n ).xy;
-                vec2 ab_e =  texture2D(tSource, vUv+e ).xy;
-                vec2 ab_s =  texture2D(tSource, vUv+s ).xy;
-                vec2 ab_w =  texture2D(tSource, vUv+w ).xy;
-                vec2 ab_nw = texture2D(tSource, vUv+nw).xy;
-                vec2 ab_sw = texture2D(tSource, vUv+sw).xy;
-                vec2 ab_ne = texture2D(tSource, vUv+ne).xy;
-                vec2 ab_se = texture2D(tSource, vUv+se).xy;
+                float a_uv = texture2D(tSource, vUv).x;
+                float b_uv = texture2D(tSource, vUv).y;
+                float d_uv = texture2D(sSource, vUv).x;
+                float e_uv = texture2D(sSource, vUv).y;
+                float f_uv = texture2D(sSource, vUv).z;
 
-                vec3 def_n =  texture2D(sSource, vUv+n ).xyz;
-                vec3 def_e =  texture2D(sSource, vUv+e ).xyz;
-                vec3 def_s =  texture2D(sSource, vUv+s ).xyz;
-                vec3 def_w =  texture2D(sSource, vUv+w ).xyz;
-                vec3 def_nw = texture2D(sSource, vUv+nw).xyz;
-                vec3 def_sw = texture2D(sSource, vUv+sw).xyz;
-                vec3 def_ne = texture2D(sSource, vUv+ne).xyz;
-                vec3 def_se = texture2D(sSource, vUv+se).xyz;
+                float a_o = abs(a_uv);
+                float b_o = abs(b_uv);
+
+                vec2 o0 = offf * vec2(a_o, 0.0);
+                vec2 o1 = offf * vec2(- a_o, 0.0);
+                vec2 o2 = offf * vec2(0.0, b_o);
+                vec2 o3 = offf * vec2(0.0, - b_o);
+                vec2 o4 = offf * vec2(a_o, b_o);
+                vec2 o5 = offf * vec2(- a_o, b_o);
+                vec2 o6 = offf * vec2(a_o, - b_o);
+                vec2 o7 = offf * vec2(- a_o, - b_o);
+
+                vec2 ab_e =  texture2D(tSource, vUv + e  + o0).xy;
+                vec2 ab_w =  texture2D(tSource, vUv + w  + o1).xy;
+                vec2 ab_n =  texture2D(tSource, vUv + n  + o2).xy;
+                vec2 ab_s =  texture2D(tSource, vUv + s  + o3).xy;
+                vec2 ab_ne = texture2D(tSource, vUv + ne + o4).xy;
+                vec2 ab_nw = texture2D(tSource, vUv + nw + o5).xy;
+                vec2 ab_se = texture2D(tSource, vUv + se + o6).xy;
+                vec2 ab_sw = texture2D(tSource, vUv + sw + o7).xy;
+
+                vec3 def_e =  texture2D(sSource, vUv + e  + o0 ).xyz;
+                vec3 def_w =  texture2D(sSource, vUv + w  + o1 ).xyz;
+                vec3 def_n =  texture2D(sSource, vUv + n  + o2 ).xyz;
+                vec3 def_s =  texture2D(sSource, vUv + s  + o3 ).xyz;
+                vec3 def_ne = texture2D(sSource, vUv + ne + o4 ).xyz;
+                vec3 def_nw = texture2D(sSource, vUv + nw + o5 ).xyz;
+                vec3 def_se = texture2D(sSource, vUv + se + o6 ).xyz;
+                vec3 def_sw = texture2D(sSource, vUv + sw + o7 ).xyz;
+
+                vec4 n0 = vec4(- ab_e.x, ab_w.x, - ab_n.y, ab_s.y);
+                vec4 n1 = vec4(- ab_ne.x - ab_ne.y,  ab_nw.x - ab_nw.y, - ab_se.x + ab_se.y, ab_sw.x + ab_sw.y);
+                vec4 m0 = vec4(- a_uv, a_uv, - b_uv, b_uv);
+                vec4 m1 = vec4(- a_uv - b_uv, a_uv - b_uv, - a_uv + b_uv, a_uv + b_uv);
 
                 vec4 d0 = vec4(def_e.x, def_w.x, def_n.x, def_s.x);
                 vec4 d1 = vec4(def_ne.x, def_nw.x, def_se.x, def_sw.x);
@@ -258,25 +273,6 @@
                 vec4 f0 = vec4(def_e.z, def_w.z, def_n.z, def_s.z);
                 vec4 f1 = vec4(def_ne.z, def_nw.z, def_se.z, def_sw.z);
 
-                /*vec4 n0 = vec4(- ab_e.x, ab_w.x, - ab_n.y, ab_s.y);
-                vec4 n1 = vec4(- ab_ne.x - ab_ne.y,  ab_nw.x - ab_nw.y, - ab_se.x + ab_se.y, ab_sw.x + ab_sw.y);
-                vec4 m0 = vec4(- a, a, - b, b);
-                vec4 m1 = vec4(- a - b, a - b, - a + b, a + b);*/
-
-                vec4 n0 = vec4(
-                    - ab_e.x - ab_ne.x - ab_se.x,
-                      ab_w.x + ab_nw.x + ab_sw.x,
-                    - ab_n.y - ab_ne.y - ab_nw.y,
-                      ab_s.y + ab_sw.y + ab_se.y
-                );
-                vec4 n1 = vec4(- ab_ne.x - ab_ne.y,  ab_nw.x - ab_nw.y, - ab_se.x + ab_se.y, ab_sw.x + ab_sw.y);
-                vec4 m0 = vec4(
-                    - ab_w.x - ab_nw.x - ab_sw.x,
-                      ab_e.x + ab_ne.x + ab_se.x,
-                    - ab_s.y - ab_se.y - ab_sw.y,
-                      ab_n.y + ab_nw.y + ab_ne.y
-                );
-                vec4 m1 = vec4(- a - b, a - b, - a + b, a + b);
 
                 if(brush.x > 0.0)
                 {
@@ -288,7 +284,7 @@
                     }
                 }
 
-                gl_FragColor = mixNeighbors(d, e, f, n0, n1, m0, m1, d0, d1, e0, e1, f0, f1);
+                gl_FragColor = clamp(mixNeighbors(d_uv, e_uv, f_uv, n0, n1, m0, m1, d0, d1, e0, e1, f0, f1), 0.0, 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="screenFragmentShader">

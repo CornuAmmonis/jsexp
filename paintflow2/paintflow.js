@@ -39,11 +39,12 @@ var PaintFlow = function(){
         { // Default
             curlf: 0.256,
             fluxf: 0.128,
-            divf:  0,
+            divf:  0.0,
             lapf:  0.04,
             feedf: 1.001,
             expf:  0.2,
-            mixf:  0.05
+            mixf:  0.05,
+            offf:  0.0
         }
     ];
 
@@ -55,6 +56,7 @@ var PaintFlow = function(){
     this.feedf = this.presets[0].feedf;
     this.expf  = this.presets[0].expf;
     this.mixf  = this.presets[0].mixf;
+    this.offf  = this.presets[0].offf;
     this.brushsize  = 50.0;
     this.brushtype  = 0;
     this.timesteps = 2;
@@ -73,6 +75,7 @@ var PaintFlow = function(){
         lapf:  {type: "f", value: this.lapf},
         feedf: {type: "f", value: this.feedf},
         expf:  {type: "f", value: this.expf},
+        offf:  {type: "f", value: this.offf},
         brushsize: {type: "f", value: this.brushsize},
         brushtype: {type: "i", value: this.brushtype},
         brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
@@ -178,6 +181,13 @@ var PaintFlow = function(){
         this.mUniforms.feedf.value = this.feedf;
         this.mUniforms.expf.value  = this.expf;
         this.mUniforms.mixf.value  = this.mixf;
+        if (this.offf >= 1.0) {
+            this.mUniforms.offf.value  = Math.exp(this.offf - 1.0) - 1.0;
+        } else if (this.offf <= -1.0) {
+            this.mUniforms.offf.value  = - (Math.exp(- this.offf - 1.0) - 1.0);
+        } else {
+            this.mUniforms.offf.value = 0.0;
+        }
         this.mUniforms.brushsize.value  = this.brushsize;
         this.mUniforms.brushtype.value  = this.brushtype;
         this.mUniforms.color.value = new THREE.Vector4(
@@ -306,6 +316,7 @@ window.onload = function() {
     gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
     gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
     gui.add(paintFlow, 'mixf').min(0.0).max(1.0).step(0.001).name("Mixing");
+    gui.add(paintFlow, 'offf').min(-10.0).max(10.0).step(0.1).name("Displacement");
     gui.add(paintFlow, 'curlf').min(0.01).max(0.512).step(0.001).name("Curl");
     gui.add(paintFlow, 'fluxf').min(0.085).max(0.512).step(0.001).name("Flux");
     gui.add(paintFlow, 'divf').min(-0.1).max(0.1).step(0.001).name("Divergence");
