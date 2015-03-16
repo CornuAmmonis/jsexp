@@ -249,7 +249,7 @@ var PaintFlow = function(){
 
     this.snapshot = function()
     {
-        var dataURL = this.canvas.toDataURL("image/png");
+        var dataURL = this.canvas.toDataURL("image/jpeg");
         window.open(dataURL, "name-"+Math.random());
     };
 
