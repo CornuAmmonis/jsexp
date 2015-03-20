@@ -39,11 +39,11 @@ var PaintFlow = function(){
         { // Default
             curlf: 0.256,
             fluxf: 0.128,
-            divf:  0.0,
+            divf:  0.01,
             lapf:  0.04,
             feedf: 1.001,
             expf:  0.2,
-            mixf:  0.05,
+            mixf:  0.7,
             offf:  0.0
         }
     ];
@@ -78,7 +78,7 @@ var PaintFlow = function(){
         offf:  {type: "f", value: this.offf},
         brushsize: {type: "f", value: this.brushsize},
         brushtype: {type: "i", value: this.brushtype},
-        brush: {type: "v2", value: new THREE.Vector2(-10, -10)},
+        brush: {type: "v2", value: this.mMinusOnes},
         color: {type: "v4", value: new THREE.Vector4(0.588, 0, 0, 0)}
     };
 
@@ -107,9 +107,17 @@ var PaintFlow = function(){
         window.addEventListener( 'resize', this.onResize.bind(this), false );
     };
 
+    this.getMaterial = function(fragmentShaderId)
+    {
+        return new THREE.ShaderMaterial({
+            uniforms: this.mUniforms,
+            vertexShader: document.getElementById('standardVertexShader').textContent,
+            fragmentShader: document.getElementById(fragmentShaderId).textContent
+        });
+    };
+
     this.initGl = function()
     {
-        this.image = THREE.ImageUtils.loadTexture('clicktopaint.png');
         this.mRenderer = new THREE.WebGLRenderer({canvas: this.canvas, preserveDrawingBuffer: true});
 
         this.mScene = new THREE.Scene();
@@ -117,26 +125,10 @@ var PaintFlow = function(){
         this.mCamera.position.z = 0;
         this.mScene.add(this.mCamera);
 
-        this.fluidMaterial = new THREE.ShaderMaterial({
-            uniforms: this.mUniforms,
-            vertexShader: document.getElementById('standardVertexShader').textContent,
-            fragmentShader: document.getElementById('fluidFragmentShader').textContent
-        });
-        this.paintMaterial = new THREE.ShaderMaterial({
-            uniforms: this.mUniforms,
-            vertexShader: document.getElementById('standardVertexShader').textContent,
-            fragmentShader: document.getElementById('paintFragmentShader').textContent
-        });
-        this.screenMaterial = new THREE.ShaderMaterial({
-            uniforms: this.mUniforms,
-            vertexShader: document.getElementById('standardVertexShader').textContent,
-            fragmentShader: document.getElementById('screenFragmentShader').textContent
-        });
-        this.debugScreenMaterial = new THREE.ShaderMaterial({
-            uniforms: this.mUniforms,
-            vertexShader: document.getElementById('standardVertexShader').textContent,
-            fragmentShader: document.getElementById('debugScreenFragmentShader').textContent
-        });
+        this.fluidMaterial = this.getMaterial('fluidFragmentShader');
+        this.paintMaterial = this.getMaterial('paintFragmentShader');
+        this.screenMaterial = this.getMaterial('screenFragmentShader');
+        this.debugScreenMaterial = this.getMaterial('debugScreenFragmentShader');
 
         var plane = new THREE.PlaneGeometry(1.0, 1.0);
         this.mScreenQuad = new THREE.Mesh(plane, this.screenMaterial);
@@ -162,7 +154,8 @@ var PaintFlow = function(){
 
     };
 
-    this.getWrappedRenderTarget = function(initImage) {
+    this.getWrappedRenderTarget = function()
+    {
         return new THREE.WebGLRenderTarget(this.textureWidth, this.textureHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
@@ -173,14 +166,15 @@ var PaintFlow = function(){
         });
     };
 
-    this.render = function() {
+    this.updateUniforms = function()
+    {
         this.mUniforms.curlf.value = this.curlf;
         this.mUniforms.fluxf.value = this.fluxf;
         this.mUniforms.divf.value  = this.divf;
         this.mUniforms.lapf.value  = this.lapf;
         this.mUniforms.feedf.value = this.feedf;
         this.mUniforms.expf.value  = this.expf;
-        this.mUniforms.mixf.value  = this.mixf;
+        this.mUniforms.mixf.value  = Math.exp(10 * (this.mixf - 1.0));
         if (this.offf >= 1.0) {
             this.mUniforms.offf.value  = Math.exp(this.offf - 1.0) - 1.0;
         } else if (this.offf <= -1.0) {
@@ -197,6 +191,20 @@ var PaintFlow = function(){
             color[2] / 255.0,
             0.0
         );
+    };
+
+    this.renderToTarget = function(material, tSource, sSource, target)
+    {
+        this.mScreenQuad.material = material;
+        this.mUniforms.tSource.value = tSource;
+        this.mUniforms.sSource.value = sSource;
+        this.mRenderer.render(this.mScene, this.mCamera, target, true);
+    };
+
+    this.render = function()
+    {
+
+        this.updateUniforms();
 
         // Let's play triple FBO ping pong
         // step:    1-2-3-4-5-6
@@ -208,32 +216,14 @@ var PaintFlow = function(){
             var pStep = this.mStep % this.uiThree;
 
             if (pStep == 0) {
-                this.mScreenQuad.material = this.fluidMaterial;
-                this.mUniforms.tSource.value = this.mTexture1;
-                this.mUniforms.sSource.value = this.mTexture3;
-                this.mRenderer.render(this.mScene, this.mCamera, this.mTexture2, true);
-                this.mScreenQuad.material = this.paintMaterial;
-                this.mUniforms.tSource.value = this.mTexture2;
-                this.mRenderer.render(this.mScene, this.mCamera, this.mTexture1, true);
-                this.mUniforms.sSource.value = this.mTexture1;
+                this.renderToTarget(this.fluidMaterial, this.mTexture1, this.mTexture3, this.mTexture2);
+                this.renderToTarget(this.paintMaterial, this.mTexture2, this.mTexture3, this.mTexture1);
             } else if (pStep == 1) {
-                this.mScreenQuad.material = this.fluidMaterial;
-                this.mUniforms.tSource.value = this.mTexture2;
-                this.mUniforms.sSource.value = this.mTexture1;
-                this.mRenderer.render(this.mScene, this.mCamera, this.mTexture3, true);
-                this.mScreenQuad.material = this.paintMaterial;
-                this.mUniforms.tSource.value = this.mTexture3;
-                this.mRenderer.render(this.mScene, this.mCamera, this.mTexture2, true);
-                this.mUniforms.sSource.value = this.mTexture2;
+                this.renderToTarget(this.fluidMaterial, this.mTexture2, this.mTexture1, this.mTexture3);
+                this.renderToTarget(this.paintMaterial, this.mTexture3, this.mTexture1, this.mTexture2);
             } else if (pStep == 2) {
-                this.mScreenQuad.material = this.fluidMaterial;
-                this.mUniforms.tSource.value = this.mTexture3;
-                this.mUniforms.sSource.value = this.mTexture2;
-                this.mRenderer.render(this.mScene, this.mCamera, this.mTexture1, true);
-                this.mScreenQuad.material = this.paintMaterial;
-                this.mUniforms.tSource.value = this.mTexture1;
-                this.mRenderer.render(this.mScene, this.mCamera, this.mTexture3, true);
-                this.mUniforms.sSource.value = this.mTexture3;
+                this.renderToTarget(this.fluidMaterial, this.mTexture3, this.mTexture2, this.mTexture1);
+                this.renderToTarget(this.paintMaterial, this.mTexture1, this.mTexture2, this.mTexture3);
             }
 
             this.mUniforms.brush.value = this.mMinusOnes;
@@ -243,7 +233,7 @@ var PaintFlow = function(){
 
         this.mScreenQuad.material = this.screenMaterial;
         this.mRenderer.render(this.mScene, this.mCamera);
-        this.mUniforms.loadImage.value = 0.0;
+        this.mUniforms.loadImage.value = 0.0; // only load image on first frame
         requestAnimationFrame(this.render.bind(this));
     };
 
@@ -253,7 +243,8 @@ var PaintFlow = function(){
         window.open(dataURL, "name-"+Math.random());
     };
 
-    this.debug = function() {
+    this.debug = function()
+    {
         var temp = this.debugScreenMaterial;
         this.debugScreenMaterial = this.screenMaterial;
         this.screenMaterial = temp;
@@ -271,13 +262,13 @@ var PaintFlow = function(){
         }
     };
 
-    this.onMouseDown = function(e)
+    this.onMouseDown = function()
     {
         this.mMouseDown = true;
         this.mUniforms.brush.value = new THREE.Vector2(this.mMouseX/this.canvasWidth, 1-this.mMouseY/this.canvasHeight);
     };
 
-    this.onMouseUp = function(e)
+    this.onMouseUp = function()
     {
         this.mMouseDown = false;
     };
@@ -307,8 +298,9 @@ var PaintFlow = function(){
         return window.innerHeight;
     };
 
-    this.parseColorString = function(colorString) {
-        m = colorString.match(/^#([0-9a-f]{6})$/i)[1];
+    this.parseColorString = function(colorString)
+    {
+        var m = colorString.match(/^#([0-9a-f]{6})$/i)[1];
         if( m ) {
             return [
                 parseInt(m.substr(0,2),16),
@@ -333,14 +325,14 @@ window.onload = function() {
     gui.add(paintFlow, 'offf').min(-10.0).max(10.0).step(0.1).name("Displacement");
     gui.add(paintFlow, 'curlf').min(0.01).max(0.512).step(0.001).name("Curl");
     gui.add(paintFlow, 'fluxf').min(0.085).max(0.512).step(0.001).name("Flux");
-    gui.add(paintFlow, 'divf').min(-0.1).max(0.1).step(0.001).name("Divergence");
+    gui.add(paintFlow, 'divf').min(-0.3).max(0.3).step(0.001).name("Divergence");
     gui.add(paintFlow, 'lapf').min(-0.1).max(0.1).step(0.001).name("Laplacian");
     gui.add(paintFlow, 'feedf').min(0.9998).max(1.01).step(0.001).name("Amplification");
     gui.add(paintFlow, 'expf').min(0.01).max(2.0).step(0.01).name("Curl Exponent");
     gui.add(paintFlow, 'timesteps').min(0).max(32).step(1).name("Speed");
-
     gui.add(paintFlow, 'snapshot').name("Screenshot");
     gui.add(paintFlow, 'debug').name("Fluid View");
+
     gui.remember(paintFlow);
 
     paintFlow.load();

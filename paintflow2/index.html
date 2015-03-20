@@ -51,11 +51,6 @@
             vec2 w  = vec2(-step_x, 0.0);
             vec2 nw = vec2(-step_x, step_y);
 
-            bool isnan(in float val)
-            {
-              return (val <= 0.0 || 0.0 <= val) ? false : true;
-            }
-
             float atan2(in float y, in float x)
             {
                 float s = (abs(x) > abs(y)) ? 1.0 : 0.0;
@@ -118,13 +113,6 @@
                         a = diff.x / brushsize;
                         b = diff.y / brushsize;
                     }
-                }
-
-                // hack
-                if (isnan(a) || isnan(b) || isnan(div)) {
-                    a = uv.r;
-                    b = uv.g;
-                    div = uv.b;
                 }
                 
                 gl_FragColor = vec4(clamp(a, -1.0, 1.0), clamp(b, -1.0, 1.0), div, 1.0);
@@ -315,7 +303,7 @@
     </head>
     <body>
         <div id="simulation">
-            <canvas id="myCanvas" class="viewer" style="width:1400px;height:1024px"></canvas>
+            <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
         </div>
     </body>
 </html>
