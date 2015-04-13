@@ -404,18 +404,8 @@
                 float d_uv = texture2D(sSource, vUv).x;
                 float e_uv = texture2D(sSource, vUv).y;
                 float f_uv = texture2D(sSource, vUv).z;
-
-                float a_o = a_uv;
-                float b_o = b_uv;
-
-                vec2 o0 = offf * vec2(a_o, 0.0);
-                vec2 o1 = offf * vec2(a_o, 0.0);
-                vec2 o2 = offf * vec2(0.0, b_o);
-                vec2 o3 = offf * vec2(0.0, b_o);
-                vec2 o4 = offf * vec2(a_o, b_o);
-                vec2 o5 = offf * vec2(-a_o, b_o);
-                vec2 o6 = offf * vec2(-a_o, b_o);
-                vec2 o7 = offf * vec2(a_o, b_o);
+            
+                vec2 o0, o1, o2, o3, o4, o5, o6, o7 = offf * vec2(a_uv, b_uv);
 
                 vec2 ab_e =  texture2D(tSource, vUv + e  + o0).xy;
                 vec2 ab_w =  texture2D(tSource, vUv + w  + o1).xy;
