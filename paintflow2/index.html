@@ -16,12 +16,105 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
             }
         </script>
-        <script type="x-shader/x-fragment" id="fluidFragmentShader">
+        <script type="x-shader/x-fragment" id="simplexNoiseFragmentShader">
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform float scalef;
+            uniform float sofff;
+            uniform vec2 brush;
+            uniform float brushsize;
+            uniform sampler2D tSource;
+
+            //
+            // Description : Array and textureless GLSL 2D simplex noise function.
+            //      Author : Ian McEwan, Ashima Arts.
+            //  Maintainer : ijm
+            //     Lastmod : 20110822 (ijm)
+            //     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
+            //               Distributed under the MIT License. See LICENSE file.
+            //               https://github.com/ashima/webgl-noise
+            //
+
+            vec3 mod289(vec3 x) {
+                return x - floor(x * (1.0 / 289.0)) * 289.0;
+            }
+
+            vec2 mod289(vec2 x) {
+                return x - floor(x * (1.0 / 289.0)) * 289.0;
+            }
+
+            vec3 permute(vec3 x) {
+                return mod289(((x*34.0)+1.0)*x);
+            }
+
+            float snoise(vec2 v) {
+                const vec4 C = vec4(0.211324865405187,  // (3.0-sqrt(3.0))/6.0
+                                    0.366025403784439,  // 0.5*(sqrt(3.0)-1.0)
+                                   -0.577350269189626,  // -1.0 + 2.0 * C.x
+                                    0.024390243902439); // 1.0 / 41.0
+                // First corner
+                vec2 i  = floor(v + dot(v, C.yy) );
+                vec2 x0 = v -   i + dot(i, C.xx);
+
+                // Other corners
+                vec2 i1;
+                //i1.x = step( x0.y, x0.x ); // x0.x > x0.y ? 1.0 : 0.0
+                //i1.y = 1.0 - i1.x;
+                i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                // x0 = x0 - 0.0 + 0.0 * C.xx ;
+                // x1 = x0 - i1 + 1.0 * C.xx ;
+                // x2 = x0 - 1.0 + 2.0 * C.xx ;
+                vec4 x12 = x0.xyxy + C.xxzz;
+                x12.xy -= i1;
+
+                // Permutations
+                i = mod289(i); // Avoid truncation effects in permutation
+                vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+                + i.x + vec3(0.0, i1.x, 1.0 ));
+
+                vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
+                m = m*m ;
+                m = m*m ;
+
+                // Gradients: 41 points uniformly over a line, mapped onto a diamond.
+                // The ring size 17*17 = 289 is close to a multiple of 41 (41*7 = 287)
+
+                vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                vec3 h = abs(x) - 0.5;
+                vec3 ox = floor(x + 0.5);
+                vec3 a0 = x - ox;
+
+                // Normalise gradients implicitly by scaling m
+                // Approximation of: m *= inversesqrt( a0*a0 + h*h );
+                m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
+
+                // Compute final noise value at P
+                vec3 g;
+                g.x  = a0.x  * x0.x  + h.x  * x0.y;
+                g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+               //return 130.0 * dot(m, g);
+               return dot(m, g);
+            }
+
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+            vec2 texel = vec2(step_x, step_y);
+
+            void main() {
+                float a, b = 0.0;
+                vec2 offset = vec2(sofff, sofff);
+                vec2 scale = scalef * vec2(1.0, screenHeight/screenWidth);
+                a = snoise(scale * vUv.xy);
+                b = snoise(scale * (vUv.xy + offset));
+                gl_FragColor = vec4(a, b, 0.0, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="smokeFluidFragmentShader">
             const float _K0 = -20.0/6.0; // center weight
             const float _K1 = 4.0/6.0; // edge-neighbors
             const float _K2 = 1.0/6.0; // vertex-neighbors
-            //const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
-            const float sq2 = 0.3;
+            const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
             const float wds = 2.0 + 4.0 * sq2;
             const float pi_over_2 = 1.57079632679;
 
@@ -59,19 +152,6 @@
 
             void main()
             {
-                float cs = curlf;
-                float ws = fluxf;
-                float sp = expf;
-                float amp = feedf;
-                float lps = lapf;
-                float lps2 = divf;
-
-                if(brush.x < -5.0)
-                {
-                    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-                    return;
-                }
-                
                 vec3 uv = texture2D(tSource, vUv).rgb;
 
                 vec3 uv_n = texture2D(tSource, vUv+n).rgb;
@@ -86,21 +166,20 @@
 
                 vec3 lapl  = _K0*uv + _K1*(uv_n + uv_e + uv_w + uv_s) + _K2*(uv_nw + uv_sw + uv_ne + uv_se);
                 float curl = (uv_n.r - uv_s.r - uv_e.g + uv_w.g + sq2 * (uv_nw.r + uv_nw.g) + sq2 * (uv_ne.r - uv_ne.g) + sq2 * (uv_sw.g - uv_sw.r) - sq2 * (uv_se.g + uv_se.r));
-                float curl_e = cs * sign(curl) * pow(abs(curl), sp);
+                float curl_e = curlf * sign(curl) * pow(abs(curl), expf);
                 vec2 flux  = vec2(uv_w.r + uv_e.r - wds * uv.r, uv_s.g + uv_n.g - wds * uv.g) + sq2 * (uv_nw.rg + uv_ne.rg + uv_se.rg + uv_sw.rg);
                 float div  = uv_s.g - uv_n.g - uv_e.r + uv_w.r + sq2 * (uv_nw.r - uv_nw.g) - sq2 * (uv_ne.r + uv_ne.g) + sq2 * (uv_sw.r + uv_sw.g) + sq2 * (uv_se.g - uv_se.r);
 
                 float theta, mag, cost, sint = 0.0;
-                const float fudge = 10000.0;
                 if (!(uv.r == 0.0 && uv.g == 0.0)) {
-                    theta = atan2(fudge * uv.g, fudge * uv.r);
+                    theta = atan2(uv.g, uv.r);
                     mag = sqrt(uv.r*uv.r + uv.g*uv.g);
                     cost = cos(theta);
                     sint = sin(theta);
                 }
 
-                float ta = amp * uv.r + ws * flux.r - lps * cost * lapl.b + lps2 * mag * cost * div;
-                float tb = amp * uv.g + ws * flux.g - lps * sint * lapl.b + lps2 * mag * sint * div;
+                float ta = feedf * uv.r + fluxf * flux.r - lapf * cost * lapl.b + divf * mag * cost * div;
+                float tb = feedf * uv.g + fluxf * flux.g - lapf * sint * lapl.b + divf * mag * sint * div;
 
                 float a = ta * cos(curl_e) - tb * sin(curl_e);
                 float b = ta * sin(curl_e) + tb * cos(curl_e);
@@ -116,6 +195,94 @@
                 }
                 
                 gl_FragColor = vec4(clamp(a, -1.0, 1.0), clamp(b, -1.0, 1.0), div, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="frustratedFlockingFluidFragmentShader">
+            const float _K0 = -20.0/6.0; // center weight
+            const float _K1 = 4.0/6.0; // edge-neighbors
+            const float _K2 = 1.0/6.0; // vertex-neighbors
+            const float sq2 = 0.7071068; // sqrt(2.0)/2.0;
+            const float wds = 2.0 + 4.0 * sq2;
+            const float nss = 4.0 + 2.0 * 1.41421356237;
+            const float pi_over_2 = 1.57079632679;
+
+            varying vec2 vUv;
+            uniform float screenWidth;
+            uniform float screenHeight;
+            uniform sampler2D tSource;
+            uniform float divf;
+            uniform float lapf;
+            uniform float feedf;
+            uniform float fluxf;
+            uniform float flockf;
+            uniform float frustf;
+            uniform vec2 brush;
+            uniform float brushsize;
+
+            vec2 texel = vec2(1.0/screenWidth, 1.0/screenHeight);
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+            vec2 n  = vec2(0.0, step_y);
+            vec2 ne = vec2(step_x, step_y);
+            vec2 e  = vec2(step_x, 0.0);
+            vec2 se = vec2(step_x, -step_y);
+            vec2 s  = vec2(0.0, -step_y);
+            vec2 sw = vec2(-step_x, -step_y);
+            vec2 w  = vec2(-step_x, 0.0);
+            vec2 nw = vec2(-step_x, step_y);
+
+            float atan2(in float y, in float x)
+            {
+                float s = (abs(x) > abs(y)) ? 1.0 : 0.0;
+                return mix(pi_over_2 - atan(x,y), atan(y,x), s);
+            }
+
+            void main()
+            {
+                vec3 uv = texture2D(tSource, vUv).rgb;
+
+                vec3 uv_n = texture2D(tSource, vUv+n).rgb;
+                vec3 uv_e = texture2D(tSource, vUv+e).rgb;
+                vec3 uv_s = texture2D(tSource, vUv+s).rgb;
+                vec3 uv_w = texture2D(tSource, vUv+w).rgb;
+
+                vec3 uv_nw = texture2D(tSource, vUv+nw).rgb;
+                vec3 uv_sw = texture2D(tSource, vUv+sw).rgb;
+                vec3 uv_ne = texture2D(tSource, vUv+ne).rgb;
+                vec3 uv_se = texture2D(tSource, vUv+se).rgb;
+
+                vec3 lapl  = _K0*uv + _K1*(uv_n + uv_e + uv_w + uv_s) + _K2*(uv_nw + uv_sw + uv_ne + uv_se);
+
+                float fa = (uv_w.r + uv_e.r + uv_n.r + uv_s.r + sq2 * (uv_nw.r + uv_sw.r + uv_ne.r + uv_se.r)) / (nss);
+                float fb = (uv_w.g + uv_e.g + uv_n.g + uv_s.g + sq2 * (uv_nw.g + uv_sw.g + uv_ne.g + uv_se.g)) / (nss);
+
+                vec2 flux  = vec2(uv_w.r + uv_e.r - wds * uv.r, uv_s.g + uv_n.g - wds * uv.g) + sq2 * (uv_nw.rg + uv_ne.rg + uv_se.rg + uv_sw.rg);
+                float div  = (uv_s.g - uv_n.g - uv_e.r + uv_w.r + sq2 * (uv_nw.r - uv_nw.g) - sq2 * (uv_ne.r + uv_ne.g) + sq2 * (uv_sw.r + uv_sw.g) + sq2 * (uv_se.g - uv_se.r));
+
+                float theta, theta2, cost, sint = 0.0;
+                if (!(fa == 0.0 && fb == 0.0)) {
+                    theta = atan2( fb, fa);
+                    cost = cos(theta);
+                    sint = sin(theta);
+                }
+
+                float ta = feedf * uv.r + fluxf * flux.r - lapf * cost * lapl.b + divf * cost * div;
+                float tb = feedf * uv.g + fluxf * flux.g - lapf * sint * lapl.b + divf * sint * div;
+
+                float a = ta * (1.0 - flockf) + fa * flockf - frustf * div * fa;
+                float b = tb * (1.0 - flockf) + fb * flockf - frustf * div * fb;
+
+                if(brush.x > 0.0)
+                {
+                    vec2 diff = (vUv - brush) / texel;
+                    float dist = sqrt(dot(diff, diff));
+                    if(dist < brushsize) {
+                        a = diff.x / brushsize;
+                        b = diff.y / brushsize;
+                    }
+                }
+
+                gl_FragColor = vec4(clamp(a, -1.0, 1.0), clamp(b, -1.0, 1.0), clamp(div, -1.0, 1.0), 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="paintFragmentShader">
@@ -135,6 +302,7 @@
             uniform vec2 brush;
             uniform float brushsize;
             uniform vec4 color;
+            uniform float contf;
 
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
@@ -148,6 +316,7 @@
             vec2 w  = vec2(-step_x, 0.0);
             vec2 nw = vec2(-step_x, step_y);
 
+            /*
             vec4 reflectance(vec4 absorption) {
                 return vec4(1.0) + absorption - sqrt(pow(absorption, vec4(2.0)) + (2.0 * absorption));
             }
@@ -156,6 +325,18 @@
                 vec4 rgb = max(vec4(CUTOFF), vec4(r, g, b, 0.0));
                 return pow((1.0 - rgb), vec4(2.0)) / (2.0 * rgb);
             }
+            */
+
+            const float gamma = 2.2;
+
+            vec4 reflectance(vec4 absorbance) {
+                return vec4(1.0) - pow(absorbance, vec4(1.0 / gamma));
+            }
+
+            vec4 absorbance(float r, float g, float b) {
+                vec4 rgb = vec4(r, g, b, 1.0);
+                return pow((1.0 - rgb), vec4(gamma));
+            }
 
             vec4 mixAbs(vec4 absorption0, vec4 absorption1, float mix) {
                 return mix * absorption0 + (1.0 - mix) * absorption1;
@@ -163,16 +344,21 @@
 
             float mixWeight(float x, float y) {
                 vec2 n = max(vec2(0.0), normalize(vec2(x, y)));
-                //return max(0.0, mixf* (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * t/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0));
-                return min(mixf * sqrt(n.x*n.y), 1.0);
+                float t = max(0.0, n.x + n.y);
+                return min(1.0, max(0.0, mixf * (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * t/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0)));
+                //return min(mixf * sqrt(n.x*n.y), 1.0);
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
                 return 0.125 * (v0 + v1 + v2 + v3 + v4 + v5 + v6 + v7);
             }
 
-            vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3) {
-                return 0.25 * (v0 + v1 + v2 + v3);
+            vec4 contrast(float s, float d, float e, float f, vec4 d0, vec4 d1, vec4 e0, vec4 e1, vec4 f0, vec4 f1) {
+                float dA = d0.x + d0.y + d0.z + d0.w + d1.x + d1.y + d1.z + d1.w;
+                float eA = e0.x + e0.y + e0.z + e0.w + e1.x + e1.y + e1.z + e1.w;
+                float fA = f0.x + f0.y + f0.z + f0.w + f1.x + f1.y + f1.z + f1.w;
+                vec4 A = 0.125 * vec4(dA, eA, fA, 1.0);
+                return s * (vec4(d, e, f, 1.0) - A) + A;
             }
 
             //packed e, w, n, s / ne, nw, se, sw
@@ -219,17 +405,17 @@
                 float e_uv = texture2D(sSource, vUv).y;
                 float f_uv = texture2D(sSource, vUv).z;
 
-                float a_o = abs(a_uv);
-                float b_o = abs(b_uv);
+                float a_o = a_uv;
+                float b_o = b_uv;
 
                 vec2 o0 = offf * vec2(a_o, 0.0);
-                vec2 o1 = offf * vec2(- a_o, 0.0);
+                vec2 o1 = offf * vec2(a_o, 0.0);
                 vec2 o2 = offf * vec2(0.0, b_o);
-                vec2 o3 = offf * vec2(0.0, - b_o);
+                vec2 o3 = offf * vec2(0.0, b_o);
                 vec2 o4 = offf * vec2(a_o, b_o);
-                vec2 o5 = offf * vec2(- a_o, b_o);
-                vec2 o6 = offf * vec2(a_o, - b_o);
-                vec2 o7 = offf * vec2(- a_o, - b_o);
+                vec2 o5 = offf * vec2(-a_o, b_o);
+                vec2 o6 = offf * vec2(-a_o, b_o);
+                vec2 o7 = offf * vec2(a_o, b_o);
 
                 vec2 ab_e =  texture2D(tSource, vUv + e  + o0).xy;
                 vec2 ab_w =  texture2D(tSource, vUv + w  + o1).xy;
@@ -272,7 +458,8 @@
                     }
                 }
 
-                gl_FragColor = clamp(mixNeighbors(d_uv, e_uv, f_uv, n0, n1, m0, m1, d0, d1, e0, e1, f0, f1), 0.0, 1.0);
+                vec4 mixed = mixNeighbors(d_uv, e_uv, f_uv, n0, n1, m0, m1, d0, d1, e0, e1, f0, f1);
+                gl_FragColor = clamp(contrast(contf, mixed.x, mixed.y, mixed.z, d0, d1, e0, e1, f0, f1), 0.0, 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="screenFragmentShader">
@@ -296,7 +483,8 @@
 
             void main()
             {
-                gl_FragColor = 10000000.0 * texture2D(tSource, vUv);
+                vec3 uv = 0.5 + 0.5 * normalize(texture2D(tSource, vUv).rgb);
+                gl_FragColor = vec4(uv, 1.0);
             }
         </script>
         <meta charset="UTF-8">

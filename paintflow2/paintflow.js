@@ -21,6 +21,7 @@ var PaintFlow = function(){
     this.mTexture3 = undefined;
     this.mScreenQuad = undefined;
 
+    this.fluidShaderId = 'smokeFluidFragmentShader';
     this.fluidMaterial = undefined;
     this.screenMaterial = undefined;
     this.paintMaterial = undefined;
@@ -28,7 +29,7 @@ var PaintFlow = function(){
 
     this.image = undefined;
 
-    this.textureWidth = 512;
+    this.textureWidth = 1024;
     this.textureHeight = 512;
 
     this.paintcolor = "#980000";
@@ -37,26 +38,36 @@ var PaintFlow = function(){
 
     this.presets = [
         { // Default
-            curlf: 0.256,
-            fluxf: 0.128,
-            divf:  0.01,
-            lapf:  0.04,
-            feedf: 1.001,
-            expf:  0.2,
-            mixf:  0.7,
-            offf:  0.0
+            curlf:  0.256,
+            fluxf:  0.128,
+            divf:   0.01,
+            lapf:   0.04,
+            feedf:  1.001,
+            expf:   0.2,
+            mixf:   0.85,
+            offf:   0.0,
+            sofff:  1.0,
+            scalef: 5.0,
+            flockf: 0.5,
+            frustf: 0.4,
+            contf:  0.0
         }
     ];
 
     // Configuration.
-    this.curlf = this.presets[0].curlf;
-    this.fluxf = this.presets[0].fluxf;
-    this.divf  = this.presets[0].divf;
-    this.lapf  = this.presets[0].lapf;
-    this.feedf = this.presets[0].feedf;
-    this.expf  = this.presets[0].expf;
-    this.mixf  = this.presets[0].mixf;
-    this.offf  = this.presets[0].offf;
+    this.curlf  = this.presets[0].curlf;
+    this.fluxf  = this.presets[0].fluxf;
+    this.divf   = this.presets[0].divf;
+    this.lapf   = this.presets[0].lapf;
+    this.feedf  = this.presets[0].feedf;
+    this.expf   = this.presets[0].expf;
+    this.mixf   = this.presets[0].mixf;
+    this.offf   = this.presets[0].offf;
+    this.flockf = this.presets[0].flockf;
+    this.frustf = this.presets[0].frustf;
+    this.sofff  = this.presets[0].sofff;
+    this.scalef = this.presets[0].scalef;
+    this.contf  = this.presets[0].contf;
     this.brushsize  = 50.0;
     this.brushtype  = 0;
     this.timesteps = 2;
@@ -68,14 +79,19 @@ var PaintFlow = function(){
         sSource: {type: "t", value: undefined},
         iSource: {type: "t", value: undefined},
         loadImage: {type: "f", value: 1.0},
-        mixf:  {type: "f", value: this.mixf},
-        curlf: {type: "f", value: this.curlf},
-        fluxf: {type: "f", value: this.fluxf},
-        divf:  {type: "f", value: this.divf},
-        lapf:  {type: "f", value: this.lapf},
-        feedf: {type: "f", value: this.feedf},
-        expf:  {type: "f", value: this.expf},
-        offf:  {type: "f", value: this.offf},
+        mixf   : {type: "f", value: this.mixf},
+        curlf  : {type: "f", value: this.curlf},
+        fluxf  : {type: "f", value: this.fluxf},
+        divf   : {type: "f", value: this.divf},
+        lapf   : {type: "f", value: this.lapf},
+        feedf  : {type: "f", value: this.feedf},
+        expf   : {type: "f", value: this.expf},
+        offf   : {type: "f", value: this.offf},
+        flockf : {type: "f", value: this.flockf},
+        frustf : {type: "f", value: this.frustf},
+        sofff  : {type: "f", value: this.sofff },
+        scalef : {type: "f", value: this.scalef},
+        contf  : {type: "f", value: this.contf},
         brushsize: {type: "f", value: this.brushsize},
         brushtype: {type: "i", value: this.brushtype},
         brush: {type: "v2", value: this.mMinusOnes},
@@ -125,7 +141,7 @@ var PaintFlow = function(){
         this.mCamera.position.z = 0;
         this.mScene.add(this.mCamera);
 
-        this.fluidMaterial = this.getMaterial('fluidFragmentShader');
+        this.fluidMaterial = this.getMaterial(this.fluidShaderId);
         this.paintMaterial = this.getMaterial('paintFragmentShader');
         this.screenMaterial = this.getMaterial('screenFragmentShader');
         this.debugScreenMaterial = this.getMaterial('debugScreenFragmentShader');
@@ -168,13 +184,18 @@ var PaintFlow = function(){
 
     this.updateUniforms = function()
     {
-        this.mUniforms.curlf.value = this.curlf;
-        this.mUniforms.fluxf.value = this.fluxf;
-        this.mUniforms.divf.value  = this.divf;
-        this.mUniforms.lapf.value  = this.lapf;
-        this.mUniforms.feedf.value = this.feedf;
-        this.mUniforms.expf.value  = this.expf;
-        this.mUniforms.mixf.value  = Math.exp(10 * (this.mixf - 1.0));
+        this.mUniforms.curlf.value  = this.curlf;
+        this.mUniforms.fluxf.value  = this.fluxf;
+        this.mUniforms.divf.value   = this.divf;
+        this.mUniforms.lapf.value   = this.lapf;
+        this.mUniforms.feedf.value  = this.feedf;
+        this.mUniforms.expf.value   = this.expf;
+        this.mUniforms.flockf.value = this.flockf;
+        this.mUniforms.frustf.value = this.frustf;
+        this.mUniforms.sofff.value  = this.sofff;
+        this.mUniforms.scalef.value = this.scalef;
+        this.mUniforms.contf.value  = 1.0 + 0.002 * this.contf;
+        this.mUniforms.mixf.value   = Math.exp(10 * (this.mixf - 1.0));
         if (this.offf >= 1.0) {
             this.mUniforms.offf.value  = Math.exp(this.offf - 1.0) - 1.0;
         } else if (this.offf <= -1.0) {
@@ -310,10 +331,56 @@ var PaintFlow = function(){
         } else {
             return [255, 255, 255];
         }
-    }
+    };
+
+    this.updateFluidShader = function(shaderId) {
+        this.fluidMaterial = this.getMaterial(shaderId);
+    };
 
 };
 
+var swappableControllers = [];
+
+var swappableControllerUniforms = {
+    'smokeFluidFragmentShader' : [
+        {id: 'curlf',  name: 'Curl',          min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'fluxf',  name: 'Flux',          min: -0.5,   max: 0.5,  step: 0.001},
+        {id: 'divf',   name: 'Divergence',    min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'lapf',   name: 'Laplacian',     min: -0.1,   max: 0.1,  step: 0.001},
+        {id: 'feedf',  name: 'Amplification', min: 0.9998, max: 1.01, step: 0.001},
+        {id: 'expf',   name: 'Curl Exponent', min: 0.0,    max: 3.0,  step: 0.01}
+    ],
+    'frustratedFlockingFluidFragmentShader' : [
+        {id: 'flockf', name: 'Flocking',      min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'frustf', name: 'Frustration',   min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'fluxf',  name: 'Flux',          min: -0.5,   max: 0.5,  step: 0.001},
+        {id: 'divf',   name: 'Divergence',    min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'lapf',   name: 'Laplacian',     min: -0.1,   max: 0.1,  step: 0.001},
+        {id: 'feedf',  name: 'Amplification', min: 0.9998, max: 1.01, step: 0.001}
+    ],
+    'simplexNoiseFragmentShader' : [
+        {id: 'scalef', name: 'Simplex Scale', min: 0.0,    max: 100.0, step: 0.1},
+        {id: 'sofff',  name: 'Y Offset',      min: 0.0,    max: 1.0,   step: 0.001}
+    ]
+};
+
+var updateUI = function(shaderId, gui, paintFlow) {
+    swappableControllers.forEach( function (controller) {
+        gui.remove(controller);
+    });
+    swappableControllers = [];
+    var uniformsToSwap = swappableControllerUniforms[shaderId];
+    uniformsToSwap.forEach( function (params) {
+        swappableControllers.push(
+            gui.add(paintFlow, params.id)
+                .min(params.min)
+                .max(params.max)
+                .step(params.step)
+                .name(params.name)
+        );
+    });
+    paintFlow.updateFluidShader(shaderId);
+};
 
 window.onload = function() {
     var paintFlow = new PaintFlow();
@@ -322,16 +389,17 @@ window.onload = function() {
     gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
     gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
     gui.add(paintFlow, 'mixf').min(0.0).max(1.0).step(0.001).name("Mixing");
-    gui.add(paintFlow, 'offf').min(-10.0).max(10.0).step(0.1).name("Displacement");
-    gui.add(paintFlow, 'curlf').min(0.01).max(0.512).step(0.001).name("Curl");
-    gui.add(paintFlow, 'fluxf').min(0.085).max(0.512).step(0.001).name("Flux");
-    gui.add(paintFlow, 'divf').min(-0.3).max(0.3).step(0.001).name("Divergence");
-    gui.add(paintFlow, 'lapf').min(-0.1).max(0.1).step(0.001).name("Laplacian");
-    gui.add(paintFlow, 'feedf').min(0.9998).max(1.01).step(0.001).name("Amplification");
-    gui.add(paintFlow, 'expf').min(0.01).max(2.0).step(0.01).name("Curl Exponent");
-    gui.add(paintFlow, 'timesteps').min(0).max(32).step(1).name("Speed");
+    gui.add(paintFlow, 'offf').min(-10.0).max(10.0).step(0.001).name("Displacement");
+    gui.add(paintFlow, 'contf').min(-10.0).max(10.0).step(0.001).name("Contrast");
+    gui.add(paintFlow, 'timesteps').min(0).max(10).step(1).name("Speed");
     gui.add(paintFlow, 'snapshot').name("Screenshot");
     gui.add(paintFlow, 'debug').name("Fluid View");
+    gui.add(paintFlow, 'fluidShaderId', {
+        'Smoke': 'smokeFluidFragmentShader',
+        'Frustrated Flocking': 'frustratedFlockingFluidFragmentShader',
+        'Simplex Noise': 'simplexNoiseFragmentShader'
+    }).name("Fluid Type").onChange(function(shaderId){updateUI(shaderId, gui, paintFlow)});
+    updateUI('smokeFluidFragmentShader', gui, paintFlow);
 
     gui.remember(paintFlow);
 

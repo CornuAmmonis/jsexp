@@ -2039,7 +2039,7 @@ dat.GUI = dat.gui.GUI = (function (css, saveDialogueContents, styleSheet, contro
 
           // TODO listening?
           this.__ul.removeChild(controller.__li);
-          this.__controllers.slice(this.__controllers.indexOf(controller), 1);
+          this.__controllers.splice(this.__controllers.indexOf(controller), 1);
           var _this = this;
           common.defer(function() {
             _this.onResize();
