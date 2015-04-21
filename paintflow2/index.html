@@ -189,8 +189,8 @@
                     vec2 diff = (vUv - brush) / texel;
                     float dist = sqrt(dot(diff, diff));
                     if(dist < brushsize) {
-                        a = diff.x / brushsize;
-                        b = diff.y / brushsize;
+                        a = diff.x / dist;
+                        b = diff.y / dist;
                     }
                 }
                 
@@ -277,8 +277,8 @@
                     vec2 diff = (vUv - brush) / texel;
                     float dist = sqrt(dot(diff, diff));
                     if(dist < brushsize) {
-                        a = diff.x / brushsize;
-                        b = diff.y / brushsize;
+                        a = diff.x / dist;
+                        b = diff.y / dist;
                     }
                 }
 
@@ -344,9 +344,9 @@
 
             float mixWeight(float x, float y) {
                 vec2 n = max(vec2(0.0), normalize(vec2(x, y)));
-                float t = max(0.0, n.x + n.y);
-                return min(1.0, max(0.0, mixf * (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * t/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0)));
-                //return min(mixf * sqrt(n.x*n.y), 1.0);
+                //float t = max(0.0, n.x + n.y);
+                //return min(1.0, max(0.0, mixf * (SQRT_2_OVER_2 + 0.5) * (2.0 * n.x * n.y) * t/(SQRT_2 * sqrt(n.x * n.x + n.y * n.y) + 1.0)));
+                return min(mixf * sqrt(n.x*n.y), 1.0);
             }
 
             vec4 vectorAvg(vec4 v0, vec4 v1, vec4 v2, vec4 v3, vec4 v4, vec4 v5, vec4 v6, vec4 v7) {
@@ -404,8 +404,9 @@
                 float d_uv = texture2D(sSource, vUv).x;
                 float e_uv = texture2D(sSource, vUv).y;
                 float f_uv = texture2D(sSource, vUv).z;
-            
-                vec2 o0, o1, o2, o3, o4, o5, o6, o7 = offf * vec2(a_uv, b_uv);
+
+                vec2 ab_norm = normalize(vec2(a_uv, b_uv));
+                vec2 o0, o1, o2, o3, o4, o5, o6, o7 = offf * ab_norm;
 
                 vec2 ab_e =  texture2D(tSource, vUv + e  + o0).xy;
                 vec2 ab_w =  texture2D(tSource, vUv + w  + o1).xy;

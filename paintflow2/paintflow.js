@@ -343,12 +343,12 @@ var swappableControllers = [];
 
 var swappableControllerUniforms = {
     'smokeFluidFragmentShader' : [
-        {id: 'curlf',  name: 'Curl',          min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'curlf',  name: 'Curl',          min: -2.0,   max: 2.0,  step: 0.001},
         {id: 'fluxf',  name: 'Flux',          min: -0.5,   max: 0.5,  step: 0.001},
-        {id: 'divf',   name: 'Divergence',    min: -0.6,   max: 0.6,  step: 0.001},
+        {id: 'divf',   name: 'Divergence',    min: -1,     max: 1,    step: 0.001},
         {id: 'lapf',   name: 'Laplacian',     min: -0.1,   max: 0.1,  step: 0.001},
         {id: 'feedf',  name: 'Amplification', min: 0.9998, max: 1.01, step: 0.001},
-        {id: 'expf',   name: 'Curl Exponent', min: 0.0,    max: 3.0,  step: 0.01}
+        {id: 'expf',   name: 'Curl Exponent', min: 0.0,    max: 3.0,  step: 0.001}
     ],
     'frustratedFlockingFluidFragmentShader' : [
         {id: 'flockf', name: 'Flocking',      min: -0.6,   max: 0.6,  step: 0.001},
@@ -389,8 +389,8 @@ window.onload = function() {
     gui.addColor(paintFlow, 'paintcolor').name("Paint Color");
     gui.add(paintFlow, 'brushsize').min(1).max(128).step(1).name("Brush Size");
     gui.add(paintFlow, 'mixf').min(0.0).max(1.0).step(0.001).name("Mixing");
-    gui.add(paintFlow, 'offf').min(-10.0).max(10.0).step(0.001).name("Displacement");
-    gui.add(paintFlow, 'contf').min(-10.0).max(10.0).step(0.001).name("Contrast");
+    gui.add(paintFlow, 'offf').min(-3.0).max(3.0).step(0.001).name("Displacement");
+    gui.add(paintFlow, 'contf').min(-10.0).max(10.0).step(0.1).name("Contrast");
     gui.add(paintFlow, 'timesteps').min(0).max(10).step(1).name("Speed");
     gui.add(paintFlow, 'snapshot').name("Screenshot");
     gui.add(paintFlow, 'debug').name("Fluid View");
