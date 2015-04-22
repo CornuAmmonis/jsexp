@@ -14,11 +14,12 @@ var PaintFlow = function(){
     this.mCamera = undefined;
     
     this.mStep = 0 >>> 0; // coerce to uint32
-    this.uiTwo = 3 >>> 0;
+    this.uiFour = 4 >>> 0;
 
     this.mTexture1 = undefined;
     this.mTexture2 = undefined;
     this.mTexture3 = undefined;
+    this.mTexture4 = undefined;
     this.mScreenQuad = undefined;
 
     this.fluidShaderId = 'smokeFluidFragmentShader';
@@ -76,6 +77,7 @@ var PaintFlow = function(){
         screenWidth: {type: "f", value: undefined},
         screenHeight: {type: "f", value: undefined},
         tSource: {type: "t", value: undefined},
+        tSource2: {type: "t", value: undefined},
         sSource: {type: "t", value: undefined},
         iSource: {type: "t", value: undefined},
         loadImage: {type: "f", value: 1.0},
@@ -163,6 +165,7 @@ var PaintFlow = function(){
         this.mTexture1 = this.getWrappedRenderTarget();
         this.mTexture2 = this.getWrappedRenderTarget();
         this.mTexture3 = this.getWrappedRenderTarget();
+        this.mTexture4 = this.getWrappedRenderTarget();
 
         this.mUniforms.screenWidth.value = this.textureWidth;
         this.mUniforms.screenHeight.value = this.textureHeight;
@@ -214,10 +217,11 @@ var PaintFlow = function(){
         );
     };
 
-    this.renderToTarget = function(material, tSource, sSource, target)
+    this.renderToTarget = function(material, tSource, tSource2, sSource, target)
     {
         this.mScreenQuad.material = material;
         this.mUniforms.tSource.value = tSource;
+        this.mUniforms.tSource2.value = tSource2;
         this.mUniforms.sSource.value = sSource;
         this.mRenderer.render(this.mScene, this.mCamera, target, true);
     };
@@ -227,24 +231,22 @@ var PaintFlow = function(){
 
         this.updateUniforms();
 
-        // Let's play triple FBO ping pong
-        // step:    1-2-3-4-5-6
-        // tSource: 1-2-2-3-3-1
-        // sSource: 3-3-1-1-2-2
-        // target:  2-1-3-2-1-3
         for(var i = 0; i < this.timesteps; ++i) {
 
-            var pStep = this.mStep % this.uiTwo;
+            var pStep = this.mStep % this.uiFour;
 
             if (pStep == 0) {
-                this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.mTexture3, this.mTexture2);
-                this.renderToTarget(this.paintMaterial, this.mTexture2, this.mTexture3, this.mTexture1);
+                this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.mTexture2, this.mTexture3, this.mTexture4);
+                this.renderToTarget(this.paintMaterial,    this.mTexture4, this.mTexture1, this.mTexture3, this.mTexture2);
             } else if (pStep == 1) {
-                this.renderToTarget(this.feedbackMaterial, this.mTexture2, this.mTexture1, this.mTexture3);
-                this.renderToTarget(this.paintMaterial, this.mTexture3, this.mTexture1, this.mTexture2);
+                this.renderToTarget(this.feedbackMaterial, this.mTexture4, this.mTexture1, this.mTexture2, this.mTexture3);
+                this.renderToTarget(this.paintMaterial,    this.mTexture3, this.mTexture4, this.mTexture2, this.mTexture1);
             } else if (pStep == 2) {
-                this.renderToTarget(this.feedbackMaterial, this.mTexture3, this.mTexture2, this.mTexture1);
-                this.renderToTarget(this.paintMaterial, this.mTexture1, this.mTexture2, this.mTexture3);
+                this.renderToTarget(this.feedbackMaterial, this.mTexture3, this.mTexture4, this.mTexture1, this.mTexture2);
+                this.renderToTarget(this.paintMaterial,    this.mTexture2, this.mTexture3, this.mTexture1, this.mTexture4);
+            } else if (pStep == 3) {
+                this.renderToTarget(this.feedbackMaterial, this.mTexture2, this.mTexture3, this.mTexture4, this.mTexture1);
+                this.renderToTarget(this.paintMaterial,    this.mTexture1, this.mTexture2, this.mTexture4, this.mTexture3);
             }
 
             this.mUniforms.brush.value = this.mMinusOnes;
