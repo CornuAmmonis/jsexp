@@ -329,7 +329,7 @@
                         vec2 off = vec2(float(i) * step_x, float(j) * step_y);
                         float gradX = length(texture2D(tSource, vUv + w + off).xy) - length(texture2D(tSource, vUv + e + off).xy);
                         float gradY = length(texture2D(tSource, vUv + s + off).xy) - length(texture2D(tSource, vUv + n + off).xy);
-                        float gradT = length(texture2D(tSource2, vUv + off).xy) - length(texture2D(tSource, vUv + off).xy);
+                        float gradT = length(texture2D(tSource, vUv + off).xy) - length(texture2D(tSource2, vUv + off).xy);
 
                         A2 += gradX * gradX;
                         A1B2 += gradX * gradY;
@@ -340,25 +340,25 @@
                 }
                 */
 
-                float gradX0 = (length(texture2D(tSource, vUv + w + off0).xy) - length(texture2D(tSource, vUv + e + off0).xy));
-                float gradX1 = (length(texture2D(tSource, vUv + w + off1).xy) - length(texture2D(tSource, vUv + e + off1).xy));
-                float gradX2 = (length(texture2D(tSource, vUv + w + off2).xy) - length(texture2D(tSource, vUv + e + off2).xy));
-                float gradX3 = (length(texture2D(tSource, vUv + w + off3).xy) - length(texture2D(tSource, vUv + e + off3).xy));
-                float gradX4 = (length(texture2D(tSource, vUv + w + off4).xy) - length(texture2D(tSource, vUv + e + off4).xy));
-                float gradX5 = (length(texture2D(tSource, vUv + w + off5).xy) - length(texture2D(tSource, vUv + e + off5).xy));
-                float gradX6 = (length(texture2D(tSource, vUv + w + off6).xy) - length(texture2D(tSource, vUv + e + off6).xy));
-                float gradX7 = (length(texture2D(tSource, vUv + w + off7).xy) - length(texture2D(tSource, vUv + e + off7).xy));
-                float gradX8 = (length(texture2D(tSource, vUv + w + off8).xy) - length(texture2D(tSource, vUv + e + off8).xy));
+                float gradX0 = (length(texture2D(tSource, vUv + e + off0).xy) - length(texture2D(tSource, vUv + w + off0).xy));
+                float gradX1 = (length(texture2D(tSource, vUv + e + off1).xy) - length(texture2D(tSource, vUv + w + off1).xy));
+                float gradX2 = (length(texture2D(tSource, vUv + e + off2).xy) - length(texture2D(tSource, vUv + w + off2).xy));
+                float gradX3 = (length(texture2D(tSource, vUv + e + off3).xy) - length(texture2D(tSource, vUv + w + off3).xy));
+                float gradX4 = (length(texture2D(tSource, vUv + e + off4).xy) - length(texture2D(tSource, vUv + w + off4).xy));
+                float gradX5 = (length(texture2D(tSource, vUv + e + off5).xy) - length(texture2D(tSource, vUv + w + off5).xy));
+                float gradX6 = (length(texture2D(tSource, vUv + e + off6).xy) - length(texture2D(tSource, vUv + w + off6).xy));
+                float gradX7 = (length(texture2D(tSource, vUv + e + off7).xy) - length(texture2D(tSource, vUv + w + off7).xy));
+                float gradX8 = (length(texture2D(tSource, vUv + e + off8).xy) - length(texture2D(tSource, vUv + w + off8).xy));
 
-                float gradY0 = (length(texture2D(tSource, vUv + s + off0).xy) - length(texture2D(tSource, vUv + n + off0).xy));
-                float gradY1 = (length(texture2D(tSource, vUv + s + off1).xy) - length(texture2D(tSource, vUv + n + off1).xy));
-                float gradY2 = (length(texture2D(tSource, vUv + s + off2).xy) - length(texture2D(tSource, vUv + n + off2).xy));
-                float gradY3 = (length(texture2D(tSource, vUv + s + off3).xy) - length(texture2D(tSource, vUv + n + off3).xy));
-                float gradY4 = (length(texture2D(tSource, vUv + s + off4).xy) - length(texture2D(tSource, vUv + n + off4).xy));
-                float gradY5 = (length(texture2D(tSource, vUv + s + off5).xy) - length(texture2D(tSource, vUv + n + off5).xy));
-                float gradY6 = (length(texture2D(tSource, vUv + s + off6).xy) - length(texture2D(tSource, vUv + n + off6).xy));
-                float gradY7 = (length(texture2D(tSource, vUv + s + off7).xy) - length(texture2D(tSource, vUv + n + off7).xy));
-                float gradY8 = (length(texture2D(tSource, vUv + s + off8).xy) - length(texture2D(tSource, vUv + n + off8).xy));
+                float gradY0 = (length(texture2D(tSource, vUv + n + off0).xy) - length(texture2D(tSource, vUv + s + off0).xy));
+                float gradY1 = (length(texture2D(tSource, vUv + n + off1).xy) - length(texture2D(tSource, vUv + s + off1).xy));
+                float gradY2 = (length(texture2D(tSource, vUv + n + off2).xy) - length(texture2D(tSource, vUv + s + off2).xy));
+                float gradY3 = (length(texture2D(tSource, vUv + n + off3).xy) - length(texture2D(tSource, vUv + s + off3).xy));
+                float gradY4 = (length(texture2D(tSource, vUv + n + off4).xy) - length(texture2D(tSource, vUv + s + off4).xy));
+                float gradY5 = (length(texture2D(tSource, vUv + n + off5).xy) - length(texture2D(tSource, vUv + s + off5).xy));
+                float gradY6 = (length(texture2D(tSource, vUv + n + off6).xy) - length(texture2D(tSource, vUv + s + off6).xy));
+                float gradY7 = (length(texture2D(tSource, vUv + n + off7).xy) - length(texture2D(tSource, vUv + s + off7).xy));
+                float gradY8 = (length(texture2D(tSource, vUv + n + off8).xy) - length(texture2D(tSource, vUv + s + off8).xy));
 
                 float gradT0 = length(texture2D(tSource2, vUv + off0).xy) - length(texture2D(tSource, vUv + off0).xy);
                 float gradT1 = length(texture2D(tSource2, vUv + off1).xy) - length(texture2D(tSource, vUv + off1).xy);
