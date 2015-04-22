@@ -136,7 +136,7 @@ var PaintFlow = function(){
 
     this.initGl = function()
     {
-        this.mRenderer = new THREE.WebGLRenderer({canvas: this.canvas, preserveDrawingBuffer: true});
+        this.mRenderer = new THREE.WebGLRenderer({canvas: this.canvas});
 
         this.mScene = new THREE.Scene();
         this.mCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -1, 1);
