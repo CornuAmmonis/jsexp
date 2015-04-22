@@ -175,7 +175,7 @@ var PaintFlow = function(){
 
     this.getWrappedRenderTarget = function()
     {
-        return new THREE.WebGLRenderTarget(this.textureWidth, this.textureHeight, {
+        var rt = new THREE.WebGLRenderTarget(this.textureWidth, this.textureHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.LinearFilter,
             format:    THREE.RGBFormat,
@@ -183,6 +183,8 @@ var PaintFlow = function(){
             wrapS:     THREE.RepeatWrapping,
             wrapT:     THREE.RepeatWrapping
         });
+        this.mRenderer.clearTarget(rt, true, true, true);
+        return rt;
     };
 
     this.updateUniforms = function()
