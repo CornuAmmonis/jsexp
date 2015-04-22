@@ -321,6 +321,25 @@
                 vec2 off7 = vec2( 0.0,     step_y);
                 vec2 off8 = vec2( step_x,  step_y);
 
+                /* This code produces corrupted output on some OSX machines. The unrolled version is below this commented code block.
+                const int step = 1;
+                float A2, A1B2, B1, C1, C2 = 0.0;
+                for (int i = -step; i <= step; i++) {
+                    for (int j = -step; j <= step; j++) {
+                        vec2 off = vec2(float(i) * step_x, float(j) * step_y);
+                        float gradX = length(texture2D(tSource, vUv + w + off).xy) - length(texture2D(tSource, vUv + e + off).xy);
+                        float gradY = length(texture2D(tSource, vUv + s + off).xy) - length(texture2D(tSource, vUv + n + off).xy);
+                        float gradT = length(texture2D(tSource2, vUv + off).xy) - length(texture2D(tSource, vUv + off).xy);
+
+                        A2 += gradX * gradX;
+                        A1B2 += gradX * gradY;
+                        B1 += gradY * gradY;
+                        C2 += gradX * gradT;
+                        C1 += gradY * gradT;
+                    }
+                }
+                */
+
                 float gradX0 = (length(texture2D(tSource, vUv + w + off0).xy) - length(texture2D(tSource, vUv + e + off0).xy));
                 float gradX1 = (length(texture2D(tSource, vUv + w + off1).xy) - length(texture2D(tSource, vUv + e + off1).xy));
                 float gradX2 = (length(texture2D(tSource, vUv + w + off2).xy) - length(texture2D(tSource, vUv + e + off2).xy));
