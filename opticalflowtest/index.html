@@ -286,24 +286,14 @@
             }
         </script>
         <script type="x-shader/x-fragment" id="paintFragmentShader">
-            #define SQRT_2 1.41421356237
-            #define SQRT_2_OVER_2 0.70710678118
-            #define CUTOFF 0.0001
 
             varying vec2 vUv;
             uniform float screenWidth;
             uniform float screenHeight;
-            uniform float loadImage;
-            uniform float mixf;
-            uniform float offf;
+
             uniform sampler2D tSource;
             uniform sampler2D tSource2;
             uniform sampler2D sSource;
-            uniform sampler2D iSource;
-            uniform vec2 brush;
-            uniform float brushsize;
-            uniform vec4 color;
-            uniform float contf;
 
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
@@ -320,28 +310,58 @@
             void main()
             {
                 float u, v = 0.0;
-                const int step = 1;
-                float A2, A1B2, B1, C1, C2 = 0.0;
-                for (int i = -step; i <= step; i++) {
-                    for (int j = -step; j <= step; j++) {
-                        vec2 off = vec2(float(i) * step_x, float(j) * step_y);
-                        float gradX = length(texture2D(tSource, vUv + w + off).xy) - length(texture2D(tSource, vUv + e + off).xy);
-                        float gradY = length(texture2D(tSource, vUv + s + off).xy) - length(texture2D(tSource, vUv + n + off).xy);
-                        float gradT = length(texture2D(tSource2, vUv + off).xy) - length(texture2D(tSource, vUv + off).xy);
 
-                        A2 += gradX * gradX;
-                        A1B2 += gradX * gradY;
-                        B1 += gradY * gradY;
-                        C2 += gradX * gradT;
-                        C1 += gradY * gradT;
-                    }
-                }
+                vec2 off0 = vec2(-step_x, -step_y);
+                vec2 off1 = vec2( 0.0,    -step_y);
+                vec2 off2 = vec2( step_x, -step_y);
+                vec2 off3 = vec2(-step_x,  0.0);
+                vec2 off4 = vec2( 0.0,     0.0);
+                vec2 off5 = vec2( step_x,  0.0);
+                vec2 off6 = vec2(-step_x,  step_y);
+                vec2 off7 = vec2( 0.0,     step_y);
+                vec2 off8 = vec2( step_x,  step_y);
+
+                float gradX0 = (length(texture2D(tSource, vUv + w + off0).xy) - length(texture2D(tSource, vUv + e + off0).xy));
+                float gradX1 = (length(texture2D(tSource, vUv + w + off1).xy) - length(texture2D(tSource, vUv + e + off1).xy));
+                float gradX2 = (length(texture2D(tSource, vUv + w + off2).xy) - length(texture2D(tSource, vUv + e + off2).xy));
+                float gradX3 = (length(texture2D(tSource, vUv + w + off3).xy) - length(texture2D(tSource, vUv + e + off3).xy));
+                float gradX4 = (length(texture2D(tSource, vUv + w + off4).xy) - length(texture2D(tSource, vUv + e + off4).xy));
+                float gradX5 = (length(texture2D(tSource, vUv + w + off5).xy) - length(texture2D(tSource, vUv + e + off5).xy));
+                float gradX6 = (length(texture2D(tSource, vUv + w + off6).xy) - length(texture2D(tSource, vUv + e + off6).xy));
+                float gradX7 = (length(texture2D(tSource, vUv + w + off7).xy) - length(texture2D(tSource, vUv + e + off7).xy));
+                float gradX8 = (length(texture2D(tSource, vUv + w + off8).xy) - length(texture2D(tSource, vUv + e + off8).xy));
+
+                float gradY0 = (length(texture2D(tSource, vUv + s + off0).xy) - length(texture2D(tSource, vUv + n + off0).xy));
+                float gradY1 = (length(texture2D(tSource, vUv + s + off1).xy) - length(texture2D(tSource, vUv + n + off1).xy));
+                float gradY2 = (length(texture2D(tSource, vUv + s + off2).xy) - length(texture2D(tSource, vUv + n + off2).xy));
+                float gradY3 = (length(texture2D(tSource, vUv + s + off3).xy) - length(texture2D(tSource, vUv + n + off3).xy));
+                float gradY4 = (length(texture2D(tSource, vUv + s + off4).xy) - length(texture2D(tSource, vUv + n + off4).xy));
+                float gradY5 = (length(texture2D(tSource, vUv + s + off5).xy) - length(texture2D(tSource, vUv + n + off5).xy));
+                float gradY6 = (length(texture2D(tSource, vUv + s + off6).xy) - length(texture2D(tSource, vUv + n + off6).xy));
+                float gradY7 = (length(texture2D(tSource, vUv + s + off7).xy) - length(texture2D(tSource, vUv + n + off7).xy));
+                float gradY8 = (length(texture2D(tSource, vUv + s + off8).xy) - length(texture2D(tSource, vUv + n + off8).xy));
+
+                float gradT0 = length(texture2D(tSource2, vUv + off0).xy) - length(texture2D(tSource, vUv + off0).xy);
+                float gradT1 = length(texture2D(tSource2, vUv + off1).xy) - length(texture2D(tSource, vUv + off1).xy);
+                float gradT2 = length(texture2D(tSource2, vUv + off2).xy) - length(texture2D(tSource, vUv + off2).xy);
+                float gradT3 = length(texture2D(tSource2, vUv + off3).xy) - length(texture2D(tSource, vUv + off3).xy);
+                float gradT4 = length(texture2D(tSource2, vUv + off4).xy) - length(texture2D(tSource, vUv + off4).xy);
+                float gradT5 = length(texture2D(tSource2, vUv + off5).xy) - length(texture2D(tSource, vUv + off5).xy);
+                float gradT6 = length(texture2D(tSource2, vUv + off6).xy) - length(texture2D(tSource, vUv + off6).xy);
+                float gradT7 = length(texture2D(tSource2, vUv + off7).xy) - length(texture2D(tSource, vUv + off7).xy);
+                float gradT8 = length(texture2D(tSource2, vUv + off8).xy) - length(texture2D(tSource, vUv + off8).xy);
+
+                float A2   = gradX0 * gradX0 + gradX1 * gradX1 + gradX2 * gradX2 + gradX3 * gradX3 + gradX4 * gradX4 + gradX5 * gradX5 + gradX6 * gradX6 + gradX7 * gradX7 + gradX8 * gradX8;
+                float A1B2 = gradX0 * gradY0 + gradX1 * gradY1 + gradX2 * gradY2 + gradX3 * gradY3 + gradX4 * gradY4 + gradX5 * gradY5 + gradX6 * gradY6 + gradX7 * gradY7 + gradX8 * gradY8;
+                float B1   = gradY0 * gradY0 + gradY1 * gradY1 + gradY2 * gradY2 + gradY3 * gradY3 + gradY4 * gradY4 + gradY5 * gradY5 + gradY6 * gradY6 + gradY7 * gradY7 + gradY8 * gradY8;
+                float C2   = gradX0 * gradT0 + gradX1 * gradT1 + gradX2 * gradT2 + gradX3 * gradT3 + gradX4 * gradT4 + gradX5 * gradT5 + gradX6 * gradT6 + gradX7 * gradT7 + gradX8 * gradT8;
+                float C1   = gradY0 * gradT0 + gradY1 * gradT1 + gradY2 * gradT2 + gradY3 * gradT3 + gradY4 * gradT4 + gradY5 * gradT5 + gradY6 * gradT6 + gradY7 * gradT7 + gradY8 * gradT8;
 
                 float delta = (A1B2 * A1B2 - A2 * B1);
 
                 if (delta != 0.0) {
                     /* system is not singular - solving by Kramer method */
-                    float Idelta = float(step) / delta;
+                    float Idelta = 1.0/ delta;
                     float deltaX = -(C1 * A1B2 - C2 * B1);
                     float deltaY = -(A1B2 * C2 - A2 * C1);
 
@@ -351,7 +371,7 @@
                     /* singular system - find optical flow in gradient direction */
                     float norm = (A1B2 + A2) * (A1B2 + A2) + (B1 + A1B2) * (B1 + A1B2);
                     if (norm != 0.0) {
-                        float IGradNorm = float(step) / norm;
+                        float IGradNorm = 1.0/ norm;
                         float temp = -(C1 + C2) * IGradNorm;
 
                         u = (A1B2 + A2) * temp;
@@ -362,6 +382,7 @@
                 }
 
                 float q = u * v;
+
                 vec3 normed = 0.5 * normalize(vec3(u, v, q));
                 vec3 offv = vec3(0.5);
                 gl_FragColor = vec4(normed + offv, 1.0);
