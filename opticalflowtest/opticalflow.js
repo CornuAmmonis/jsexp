@@ -71,7 +71,6 @@ var PaintFlow = function(){
         tSource: {type: "t", value: undefined},
         tSource2: {type: "t", value: undefined},
         sSource: {type: "t", value: undefined},
-        iSource: {type: "t", value: undefined},
         loadImage: {type: "f", value: 1.0},
         mixf   : {type: "f", value: this.mixf},
         curlf  : {type: "f", value: this.curlf},
@@ -89,7 +88,6 @@ var PaintFlow = function(){
 
     this.init = function()
     {
-        this.mUniforms.iSource.value = this.image;
         this.initCanvas();
         this.initGl();
         this.render();
@@ -118,7 +116,7 @@ var PaintFlow = function(){
 
     this.initGl = function()
     {
-        this.mRenderer = new THREE.WebGLRenderer({canvas: this.canvas});
+        this.mRenderer = new THREE.WebGLRenderer({canvas: this.canvas, preserveDrawingBuffer: true});
 
         this.mScene = new THREE.Scene();
         this.mCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, -1, 1);
