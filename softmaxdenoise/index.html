@@ -85,7 +85,7 @@
                 for (int j = -radius; j <= radius; j++) {
                     float fj = float(j);
                     vec3 x = texture2D(src, vUv + fj * vec2(step_x, 0.0)).xyz;
-                    vec3 g = gaussian(vec3(fj), 0.0, devs);
+                    vec3 g = gaussian(vec3(fj), 0.0, 1.5);
                     n += g * x;
                     d += g;
                 }
@@ -99,7 +99,7 @@
                 for (int j = -radius; j <= radius; j++) {
                     float fj = float(j);
                     vec3 x = texture2D(src, vUv + fj * vec2(0.0, step_y)).xyz;
-                    vec3 g = gaussian(vec3(fj), 0.0, devs);
+                    vec3 g = gaussian(vec3(fj), 0.0, 1.5);
                     n += g * x;
                     d += g;
                 }
@@ -110,7 +110,8 @@
                 vec3 x = texture2D(sSrc, vUv).xyz;
                 float i = texture2D(iSrc, vUv).x;
 
-                vec3 d = pow(i - x, vec3(-2.0));
+                float exp = -2.0 * devs;
+                vec3 d = pow(abs(i - x), vec3(exp));
                 vec3 dx = d * x;
                 float weighted = (dx.x + dx.y + dx.z) / (d.x + d.y + d.z);
                 return mix * weighted + (1.0 - mix) * i;

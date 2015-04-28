@@ -137,7 +137,6 @@ var ManifoldDenoise = function(config){
             this.updateUniforms();
             for (var i = 0; i < this.uiMax; ++i) {
                 this.mUniforms.step.value = Math.min(this.uiStep, this.uiMax);
-                console.log(this.mUniforms.step.value);
                 var pStep = this.uiStep % this.uiTwo;
 
                 if (pStep == 0) {
@@ -225,13 +224,13 @@ window.onload = function() {
     var manifoldDenoise = new ManifoldDenoise({
         amount: 10.0,
         mix: 1.0,
-        devs: 1.5
+        devs: 1.0
     });
     var gui = new dat.GUI();
 
-    gui.add(manifoldDenoise, 'amount').min(0.0).max(20.0).step(0.01).name("Amount").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
     gui.add(manifoldDenoise, 'mix').min(0.0).max(1.0).step(0.01).name("Mix").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
-    gui.add(manifoldDenoise, 'devs').min(0.1).max(3.0).step(0.01).name("Deviation").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'amount').min(0.0).max(20.0).step(0.01).name("Hardness").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'devs').min(0.0).max(1.0).step(0.01).name("Exponent").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
 
     manifoldDenoise.load();
 };
