@@ -25,10 +25,26 @@
         <div class="jumbotron">
             <svg id="visualisation" width="1000" height="500"></svg>
             <script>
+                /*
                 var generateData = function(samples) {
                     var arr = [];
                     for (var i = 0; i < samples; i++) {
                         arr.push(Math.random());
+                    }
+                    return arr;
+                };*/
+
+                var generateData = function(samples) {
+                    var arr = [];
+                    var coeffs = 21;
+                    var w = 20;
+                    for (var i = 0; i < samples; i++) {
+                        //arr.push(0.5 + 0.2 * Math.sin(i * 0.2) + 0.8 * (Math.random() - 0.5));
+                        var acc = 0;
+                        for (var j = 1; j <= coeffs; j += 2) {
+                            acc += (2 / (Math.PI * j)) * Math.sin(j * Math.PI * i / w);
+                        }
+                        arr.push(0.5 + 0.85 * acc);
                     }
                     return arr;
                 };
@@ -117,7 +133,14 @@
                             normconvn += g * v;
                             normconvd += g;
                         }
-                        out.push([i, normconvn / normconvd]);
+                        // underflow
+                        var averaged = 0;
+                        if (normconvd <= 0) {
+                            averaged = convolutions[Math.floor(j/2)][0][i][1]
+                        } else {
+                            averaged = normconvn / normconvd;
+                        }
+                        out.push([i, averaged]);
                     }
                     return out;
                 };
@@ -125,7 +148,7 @@
                 var initChart = function() {
                     var samples = 100;
                     var initData = generateData(samples);
-                    var convs = 15; // must be odd
+                    var convs = 3; // must be odd and >= 3
                     var convolutions = generateConvolutions(convs, initData);
                     var final = average(samples, convs, convolutions, initData);
                     var vis = d3.select("#visualisation"),
