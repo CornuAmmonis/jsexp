@@ -29,6 +29,7 @@ var ManifoldDenoise = function(config){
     this.amount = config.amount;
     this.mix    = config.mix;
     this.devs   = config.devs;
+    this.exps   = config.exps;
 
     this.mUniforms = {
         screenWidth:  {type: "f", value: undefined},
@@ -38,7 +39,8 @@ var ManifoldDenoise = function(config){
         step:         {type: "i", value: this.uiStep},
         amount:       {type: "f", value: this.amount},
         mix:          {type: "f", value: this.mix},
-        devs:         {type: "f", value: this.devs}
+        devs:         {type: "f", value: this.devs},
+        exps:         {type: "f", value: this.exps}
     };
 
     this.load = function()
@@ -112,8 +114,8 @@ var ManifoldDenoise = function(config){
             magFilter: THREE.NearestFilter,
             format:    THREE.RGBFormat,
             type:      THREE.FloatType,
-            wrapS:     THREE.RepeatWrapping,
-            wrapT:     THREE.RepeatWrapping
+            wrapS:     THREE.MirroredRepeatWrapping,
+            wrapT:     THREE.MirroredRepeatWrapping
         });
     };
 
@@ -121,6 +123,7 @@ var ManifoldDenoise = function(config){
     {
         this.mUniforms.amount.value = this.amount;
         this.mUniforms.devs.value   = this.devs;
+        this.mUniforms.exps.value   = this.exps;
         this.mUniforms.mix.value    = this.mix;
     };
 
@@ -224,13 +227,15 @@ window.onload = function() {
     var manifoldDenoise = new ManifoldDenoise({
         amount: 10.0,
         mix: 1.0,
-        devs: 1.0
+        exps: 1.0,
+        devs: 1.5
     });
     var gui = new dat.GUI();
 
     gui.add(manifoldDenoise, 'mix').min(0.0).max(1.0).step(0.01).name("Mix").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
     gui.add(manifoldDenoise, 'amount').min(0.0).max(20.0).step(0.01).name("Hardness").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
-    gui.add(manifoldDenoise, 'devs').min(0.0).max(1.0).step(0.01).name("Exponent").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'exps').min(0.0).max(2.0).step(0.01).name("Exponent").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'devs').min(0.5).max(3.0).step(0.01).name("Deviation").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
 
     manifoldDenoise.load();
 };

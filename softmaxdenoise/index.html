@@ -36,14 +36,16 @@
 
             uniform int step;
             uniform float amount;
+            uniform float exps;
             uniform float devs;
             uniform float mix;
 
             float step_x = 1.0/screenWidth;
             float step_y = 1.0/screenHeight;
 
+            const int radius = 6;
+
             vec3 minmax_transformX(sampler2D src, float scale) {
-                const int radius = 2;
                 vec3 n = vec3(0.0);
                 vec3 d = vec3(0.0);
                 for (int j = -radius; j <= radius; j++) {
@@ -57,7 +59,6 @@
             }
 
             vec3 minmax_transformY(sampler2D src, float scale) {
-                const int radius = 2;
                 vec3 n = vec3(0.0);
                 vec3 d = vec3(0.0);
                 for (int j = -radius; j <= radius; j++) {
@@ -79,13 +80,12 @@
             }
 
             vec3 gaussianX(sampler2D src) {
-                const int radius = 2;
                 vec3 n = vec3(0.0);
                 vec3 d = vec3(0.0);
                 for (int j = -radius; j <= radius; j++) {
                     float fj = float(j);
                     vec3 x = texture2D(src, vUv + fj * vec2(step_x, 0.0)).xyz;
-                    vec3 g = gaussian(vec3(fj), 0.0, 1.5);
+                    vec3 g = gaussian(vec3(fj), 0.0, devs);
                     n += g * x;
                     d += g;
                 }
@@ -93,13 +93,12 @@
             }
 
             vec3 gaussianY(sampler2D src) {
-                const int radius = 2;
                 vec3 n = vec3(0.0);
                 vec3 d = vec3(0.0);
                 for (int j = -radius; j <= radius; j++) {
                     float fj = float(j);
                     vec3 x = texture2D(src, vUv + fj * vec2(0.0, step_y)).xyz;
-                    vec3 g = gaussian(vec3(fj), 0.0, 1.5);
+                    vec3 g = gaussian(vec3(fj), 0.0, devs);
                     n += g * x;
                     d += g;
                 }
@@ -110,7 +109,7 @@
                 vec3 x = texture2D(sSrc, vUv).xyz;
                 float i = texture2D(iSrc, vUv).x;
 
-                float exp = -2.0 * devs;
+                float exp = -2.0 * exps;
                 vec3 d = pow(abs(i - x), vec3(exp));
                 vec3 dx = d * x;
                 float weighted = (dx.x + dx.y + dx.z) / (d.x + d.y + d.z);
