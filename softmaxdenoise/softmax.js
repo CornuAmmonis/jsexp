@@ -22,12 +22,13 @@ var ManifoldDenoise = function(config){
 
     this.image = undefined;
 
-    this.textureWidth = 1024;
+    this.textureWidth = 2048;
     this.textureHeight = 1024;
 
     // Configuration.
     this.amount = config.amount;
     this.mix    = config.mix;
+    this.devs   = config.devs;
 
     this.mUniforms = {
         screenWidth:  {type: "f", value: undefined},
@@ -36,7 +37,8 @@ var ManifoldDenoise = function(config){
         iSource:      {type: "t", value: undefined},
         step:         {type: "i", value: this.uiStep},
         amount:       {type: "f", value: this.amount},
-        mix:          {type: "f", value: this.mix}
+        mix:          {type: "f", value: this.mix},
+        devs:         {type: "f", value: this.devs}
     };
 
     this.load = function()
@@ -118,6 +120,7 @@ var ManifoldDenoise = function(config){
     this.updateUniforms = function()
     {
         this.mUniforms.amount.value = this.amount;
+        this.mUniforms.devs.value   = this.devs;
         this.mUniforms.mix.value    = this.mix;
     };
 
@@ -220,13 +223,15 @@ var updateUI = function(shaderId, gui, paintFlow) {
 
 window.onload = function() {
     var manifoldDenoise = new ManifoldDenoise({
-        amount: 5.0,
-        mix: 1.0
+        amount: 10.0,
+        mix: 1.0,
+        devs: 1.5
     });
     var gui = new dat.GUI();
 
-    gui.add(manifoldDenoise, 'amount').min(0.0).max(10.0).step(0.01).name("Amount").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'amount').min(0.0).max(20.0).step(0.01).name("Amount").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
     gui.add(manifoldDenoise, 'mix').min(0.0).max(1.0).step(0.01).name("Mix").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'devs').min(0.1).max(3.0).step(0.01).name("Deviation").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
 
     manifoldDenoise.load();
 };

@@ -36,6 +36,7 @@
 
             uniform int step;
             uniform float amount;
+            uniform float devs;
             uniform float mix;
 
             float step_x = 1.0/screenWidth;
@@ -79,13 +80,12 @@
 
             vec3 gaussianX(sampler2D src) {
                 const int radius = 2;
-                const float stddev = 1.5;
                 vec3 n = vec3(0.0);
                 vec3 d = vec3(0.0);
                 for (int j = -radius; j <= radius; j++) {
                     float fj = float(j);
                     vec3 x = texture2D(src, vUv + fj * vec2(step_x, 0.0)).xyz;
-                    vec3 g = gaussian(vec3(fj), 0.0, stddev);
+                    vec3 g = gaussian(vec3(fj), 0.0, devs);
                     n += g * x;
                     d += g;
                 }
@@ -94,13 +94,12 @@
 
             vec3 gaussianY(sampler2D src) {
                 const int radius = 2;
-                const float stddev = 1.5;
                 vec3 n = vec3(0.0);
                 vec3 d = vec3(0.0);
                 for (int j = -radius; j <= radius; j++) {
                     float fj = float(j);
                     vec3 x = texture2D(src, vUv + fj * vec2(0.0, step_y)).xyz;
-                    vec3 g = gaussian(vec3(fj), 0.0, stddev);
+                    vec3 g = gaussian(vec3(fj), 0.0, devs);
                     n += g * x;
                     d += g;
                 }
@@ -141,7 +140,7 @@
     </head>
     <body>
         <div id="simulation">
-            <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
+            <canvas id="myCanvas" class="viewer" style="width:2048px;height:1024px"></canvas>
         </div>
     </body>
 </html>
