@@ -1,16 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Wavelet Sharpen</title>
-        <link rel="stylesheet" type="text/css" href="../css/experiments.css"/>
-        <link rel="stylesheet" type="text/css" href="../gradientui/gradientui.css"/>
-        <link type="text/css" href="../3rd/custom-theme/jquery-ui-1.8.16.custom.css" rel="stylesheet" />
-        <script type="text/javascript" src="../3rd/jquery-1.6.2.min.js"></script>
-        <script type="text/javascript" src="../3rd/jquery-ui-1.8.16.custom.min.js"></script>
-        <script type="text/javascript" src="../3rd/colorPicker.js"></script>
-        <script type="text/javascript" src="../3rd/three.min.js"></script>
-        <script type="text/javascript" src="../gradientui/gradientui.js"></script>
-        <!--script type="text/javascript" src="http://mrdoob.github.com/three.js/build/three.min.js"></script-->
+        <title>Softmax Manifold Denoise</title>
+        <link rel="stylesheet" type="text/css" href="softmax.css"/>
+        <script type="text/javascript" src="../3rd/three.js"></script>
+        <script type="text/javascript" src="../3rd/dat.gui.js"></script>
+        <script type="text/javascript" src="../3rd/jquery-1.11.2.min.js"></script>
+        <script type="text/javascript" src="softmax.js"></script>
         <script type="x-shader/x-vertex" id="standardVertexShader">
             varying vec2 vUv;
 
@@ -20,7 +16,16 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
         </script>
-        <script type="x-shader/x-vertex" id="waveletSharpenFragmentShader">
+        <script type="x-shader/x-fragment" id="screenFragmentShader">
+            varying vec2 vUv;
+            uniform sampler2D sSource;
+
+            void main()
+            {
+                gl_FragColor = texture2D(sSource, vUv);
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="feedbackFragmentShader">
             varying vec2 vUv;
 
             uniform float screenWidth;
@@ -29,7 +34,7 @@
             uniform sampler2D sSource;
             uniform sampler2D iSource;
 
-            uniform int state;
+            uniform int step;
             uniform float amount;
             uniform float mix;
 
@@ -110,90 +115,33 @@
                 vec3 dx = d * x;
                 float weighted = (dx.x + dx.y + dx.z) / (d.x + d.y + d.z);
                 return mix * weighted + (1.0 - mix) * i;
-
-                /*
-                    float average = (x.x + x.y + x.z) / 3.0;
-                    vec3 variance = pow(x - average, vec3(2.0));
-                    float stddev = sqrt((variance.x + variance.y + variance.z) / 3.0);
-                    vec3 g = gaussian(x, average + mix * (i - average), stddev);
-                    vec3 gx = g * x;
-                    float d = g.z + g.y + g.z;
-                    // underflow
-                    if (d <= 0.0) {
-                        return x.y;
-                    } else {
-                        return (gx.x + gx.y + gx.z) / d;
-                    }
-                */
             }
 
             void main()
             {
                 vec3 result;
-                if (state == 0) {
+                if (step == 0) {
                     result = minmax_transformX(iSource, amount);
-                } else if (state == 1) {
+                } else if (step == 1) {
                     result = minmax_transformY(sSource, amount);
-                } else if (state == 2) {
+                } else if (step == 2) {
                     result = gaussianX(sSource);
-                } else if (state == 3) {
+                } else if (step == 3) {
                     result = gaussianY(sSource);
-                } else if (state == 4) {
+                } else if (step == 4) {
                     result = vec3(slice(sSource, iSource));
-                } else if (state == 5) {
+                } else {
                     result = texture2D(sSource, vUv).xyz;
                 }
 
                 gl_FragColor = vec4(result, 1.0);
             }
         </script>
-        <script type="text/javascript" src="sharpen.js"></script>
         <meta charset="UTF-8">
-        <script>
-            $(function()
-            {
-                load();
-            });
-        </script>
     </head>
     <body>
-        <header>
-            <h1>Wavelet Sharpen</h1>
-        </header>
         <div id="simulation">
-        <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
-        <aside class="panel">
-            <section id="instructions">
-                <header><h4>Instructions</h4></header>
-                <ol>
-                    <li>Adjust the denoise amount.</li>
-                </ol>
-            </section>
-            <section id="controls">
-                <h4 class="unsafe">Settings</h4>
-                Amount:
-                <span class ="remark" id="amount"></span><br/>
-                <div id="sld_amount" class="slider"></div>
-
-                Mix:
-                <span class ="remark" id="mix"></span><br/>
-                <div id="sld_mix" class="slider"></div>
-            </section>
-        </aside>
-        </div>
-        <footer>
-                <div id="copyright">
-                    &copy;2014 <a href="https://twitter.com/cornusammonis">@cornusammonis</a>
-                    <a href="https://github.com/CornuAmmonis/jsexp">Github</a><br>
-                    <a id="notworking" href="#">Not working?</a>
-                </div>
-        </footer>
-        
-        <div id="requirement_dialog" title="Requirements">
-            <p>This simulation requires the GL extensions framebuffer_object and texture_float.
-            If you cannot see the simulation your system probably lacks at least one of these extensions.</p>
-            
-            <p>In Google Chrome, you can see the available GL extensions going to chrome://gpu.</p>
+            <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
         </div>
     </body>
 </html>
