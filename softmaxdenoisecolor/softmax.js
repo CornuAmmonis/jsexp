@@ -56,7 +56,9 @@ var ManifoldDenoise = function(config){
 
     this.load = function()
     {
-        this.image = THREE.ImageUtils.loadTexture('frog.jpg', THREE.UVMapping, this.init.bind(this))
+        // Collared Aracari -- Parque Nacional Darién, Panama -- 2008 February
+        // https://commons.wikimedia.org/wiki/File:Pteroglossus-torquatus-001.jpg#/media/File:Pteroglossus-torquatus-001.jpg
+        this.image = THREE.ImageUtils.loadTexture('toucan.jpg', THREE.UVMapping, this.init.bind(this))
     };
 
     this.init = function()
@@ -258,16 +260,16 @@ var updateUI = function(shaderId, gui, paintFlow) {
 
 window.onload = function() {
     var manifoldDenoise = new ManifoldDenoise({
-        amount: 10.0,
+        amount: 5.0,
         mix: 1.0,
-        exps: 1.0,
+        exps: 3.0,
         detail: 0.0
     });
     var gui = new dat.GUI();
 
     gui.add(manifoldDenoise, 'mix').min(0.0).max(1.0).step(0.01).name("Mix").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
     gui.add(manifoldDenoise, 'amount').min(0.0).max(20.0).step(0.01).name("Hardness").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
-    gui.add(manifoldDenoise, 'exps').min(0.0).max(3.0).step(0.01).name("Exponent").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
+    gui.add(manifoldDenoise, 'exps').min(0.0).max(5.0).step(0.01).name("Exponent").onChange(manifoldDenoise.resetCounter.bind(manifoldDenoise));
     gui.add(manifoldDenoise, 'detail').min(0.0).max(3.0).step(0.01).name("Enhance Detail");
 
     manifoldDenoise.load();
