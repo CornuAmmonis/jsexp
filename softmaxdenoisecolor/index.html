@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Softmax Manifold Denoise</title>
+        <link rel="stylesheet" type="text/css" href="softmax.css"/>
+        <script type="text/javascript" src="../3rd/three.js"></script>
+        <script type="text/javascript" src="../3rd/dat.gui.js"></script>
+        <script type="text/javascript" src="../3rd/jquery-1.11.2.min.js"></script>
+        <script type="text/javascript" src="softmax.js"></script>
+        <script type="x-shader/x-vertex" id="standardVertexShader">
+            varying vec2 vUv;
+
+            void main()
+            {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="screenFragmentShader">
+            varying vec2 vUv;
+            uniform sampler2D sSource;
+            uniform sampler2D iSource;
+
+            uniform float detail;
+
+            void main()
+            {
+                vec4 is = texture2D(iSource, vUv);
+                vec4 ss = texture2D(sSource, vUv);
+                gl_FragColor = detail * (is - ss) + ss;
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="feedbackFragmentShader">
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            uniform sampler2D sSource;
+            uniform sampler2D iSource;
+
+            uniform int step;
+            uniform int chan;
+            uniform float amount;
+
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+
+            const int radius = 6;
+
+            vec3 getX(sampler2D src, int ch, float j, float s_x) {
+                if (ch == 0) {
+                    return vec3(texture2D(src, vUv + j * vec2(s_x, 0.0)).x);
+                } else if (ch == 1) {
+                    return vec3(texture2D(src, vUv + j * vec2(s_x, 0.0)).y);
+                } else {
+                    return vec3(texture2D(src, vUv + j * vec2(s_x, 0.0)).z);
+                }
+            }
+
+            vec3 minmax_transformX(sampler2D src, float scale, int ch) {
+                vec3 n = vec3(0.0);
+                vec3 d = vec3(0.0);
+                for (int j = -radius; j <= radius; j++) {
+                    vec3 x = getX(src, ch, float(j), step_x);
+                    vec3 v = vec3(- scale, 0.0, scale);
+                    vec3 q = exp(v * x);
+                    n += x * q;
+                    d += q;
+                }
+                return n / d;
+            }
+
+            vec3 minmax_transformY(sampler2D src, float scale) {
+                vec3 n = vec3(0.0);
+                vec3 d = vec3(0.0);
+                for (int j = -radius; j <= radius; j++) {
+                    vec3 x = texture2D(src, vUv + float(j) * vec2(0.0, step_y)).xyz;
+                    vec3 v = vec3(- scale, 0.0, scale);
+                    vec3 q = exp(v * x);
+                    n += x * q;
+                    d += q;
+                }
+                return n / d;
+            }
+
+            void main()
+            {
+                vec3 result;
+                if (step == 0) {
+                    result = minmax_transformX(iSource, amount, chan);
+                } else {
+                    result = minmax_transformY(sSource, amount);
+                }
+
+                gl_FragColor = vec4(result, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="sliceFragmentShader">
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            uniform sampler2D sSource0, sSource1, sSource2;
+            uniform sampler2D iSource;
+
+            uniform float exps;
+            uniform float mix;
+
+            float step_x = 1.0/screenWidth;
+            float step_y = 1.0/screenHeight;
+
+            const int radius = 6;
+
+            float getI(int ch) {
+                if (ch == 0) {
+                    return texture2D(iSource, vUv).x;
+                } else if (ch == 1) {
+                    return texture2D(iSource, vUv).y;
+                } else {
+                    return texture2D(iSource, vUv).z;
+                }
+            }
+
+            float slice(sampler2D sSrc, int ch) {
+                vec3 x = texture2D(sSrc, vUv).xyz;
+                float i = getI(ch);
+
+                float exp = -2.0 * exps;
+                vec3 d = pow(abs(i - x), vec3(exp));
+                vec3 dx = d * x;
+                float denom = (d.x + d.y + d.z);
+                float weighted = 0.0;
+                if (denom <= 0.0) {
+                    weighted = x.y;
+                } else {
+                    weighted = (dx.x + dx.y + dx.z) / denom;
+                }
+                return mix * weighted + (1.0 - mix) * i;
+            }
+
+            void main()
+            {
+                vec3 result = vec3(slice(sSource0, 0), slice(sSource1, 1), slice(sSource2, 2));
+                gl_FragColor = vec4(result, 1.0);
+            }
+        </script>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <div id="simulation">
+            <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
+        </div>
+    </body>
+</html>
