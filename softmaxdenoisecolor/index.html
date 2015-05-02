@@ -127,8 +127,9 @@
                 vec3 x = texture2D(sSrc, vUv).xyz;
                 float i = getI(ch);
 
-                float exp = -2.0 * exps;
-                vec3 d = pow(abs(i - x), vec3(exp));
+                //float exp = -2.0 * exps;
+                //vec3 d = pow(abs(i - x), vec3(exp));
+                vec3 d = exp(- 8.0 * exps * abs(i - x));
                 vec3 dx = d * x;
                 float denom = (d.x + d.y + d.z);
                 float weighted = 0.0;
