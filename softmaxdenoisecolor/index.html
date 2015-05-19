@@ -316,7 +316,7 @@
             float slice(sampler2D sSrc, int ch) {
                 vec3 x = texture2D(sSrc, vUv).xyz;
                 float i = getI(ch);
-                vec3 d = exp(- 2.0 * exps * abs(i - x));
+                vec3 d = exp(- exps * abs(i - x));
                 vec3 dx = d * x;
                 float denom = (d.x + d.y + d.z);
                 float weighted = 0.0;

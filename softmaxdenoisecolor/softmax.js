@@ -181,38 +181,39 @@ var ManifoldDenoise = function(config){
 
     this.render = function()
     {
-
+        var imageTexture;
         this.updateUniforms();
 
         this.renderToTarget(this.pathTracerMaterial, this.dummyTexture, this.dummyTexture, this.mTexture1);
 
+        if (this.uiStep % 2 == 0) {
+            this.renderToTarget(this.accumulatorMaterial, this.mTexture8, this.mTexture1, this.mTexture9);
+            imageTexture = this.mTexture9;
+        } else {
+            this.renderToTarget(this.accumulatorMaterial, this.mTexture9, this.mTexture1, this.mTexture8);
+            imageTexture = this.mTexture8;
+        }
+
         this.mUniforms.step.value = 0;
 
         this.mUniforms.chan.value = 0;
-        this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.dummyTexture, this.mTexture2);
+        this.renderToTarget(this.feedbackMaterial, imageTexture, this.dummyTexture, this.mTexture2);
         this.mUniforms.chan.value = 1;
-        this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.dummyTexture, this.mTexture3);
+        this.renderToTarget(this.feedbackMaterial, imageTexture, this.dummyTexture, this.mTexture3);
         this.mUniforms.chan.value = 2;
-        this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.dummyTexture, this.mTexture4);
+        this.renderToTarget(this.feedbackMaterial, imageTexture, this.dummyTexture, this.mTexture4);
 
         this.mUniforms.step.value = 1;
 
-        this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.mTexture2, this.mTexture5);
-        this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.mTexture3, this.mTexture6);
-        this.renderToTarget(this.feedbackMaterial, this.mTexture1, this.mTexture4, this.mTexture7);
+        this.renderToTarget(this.feedbackMaterial, imageTexture, this.mTexture2, this.mTexture5);
+        this.renderToTarget(this.feedbackMaterial, imageTexture, this.mTexture3, this.mTexture6);
+        this.renderToTarget(this.feedbackMaterial, imageTexture, this.mTexture4, this.mTexture7);
 
-        this.sliceToTarget(this.mTexture1, this.mTexture5, this.mTexture6, this.mTexture7, this.mTexture2);
-
-        if (this.uiStep % 2 == 0) {
-            this.renderToTarget(this.accumulatorMaterial, this.mTexture8, this.mTexture2, this.mTexture9);
-            this.mUniforms.sSource.value = this.mTexture9;
-        } else {
-            this.renderToTarget(this.accumulatorMaterial, this.mTexture9, this.mTexture2, this.mTexture8);
-            this.mUniforms.sSource.value = this.mTexture8;
-        }
+        this.sliceToTarget(imageTexture, this.mTexture5, this.mTexture6, this.mTexture7, this.mTexture2);
 
         this.mUniforms.detail.value = this.detail;
-        this.mUniforms.iSource.value = this.mTexture1;
+        this.mUniforms.iSource.value = imageTexture;
+        this.mUniforms.sSource.value = this.mTexture2;
         this.mScreenQuad.material = this.screenMaterial;
         this.mRenderer.render(this.mScene, this.mCamera);
 
@@ -288,17 +289,17 @@ var updateUI = function(shaderId, gui, paintFlow) {
 
 window.onload = function() {
     var manifoldDenoise = new ManifoldDenoise({
-        amount: 5.0,
+        amount: 10.0,
         mix: 1.0,
-        exps: 3.0,
+        exps: 15.0,
         detail: 0.0,
-        arate: 0.1
+        arate: 0.05
     });
     var gui = new dat.GUI();
 
     gui.add(manifoldDenoise, 'mix').min(0.0).max(1.0).step(0.01).name("Mix");
-    gui.add(manifoldDenoise, 'amount').min(0.0).max(10.0).step(0.01).name("Hardness");
-    gui.add(manifoldDenoise, 'exps').min(0.0).max(5.0).step(0.01).name("Exponent");
+    gui.add(manifoldDenoise, 'amount').min(0.0).max(50.0).step(0.01).name("Hardness");
+    gui.add(manifoldDenoise, 'exps').min(0.0).max(20.0).step(0.01).name("Exponent");
     gui.add(manifoldDenoise, 'arate').min(0.0).max(0.2).step(0.001).name("Accumulator Rate");
     gui.add(manifoldDenoise, 'detail').min(0.0).max(10.0).step(0.01).name("Enhance Detail");
 
