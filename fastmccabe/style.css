@@ -1,0 +1,17 @@
+
+body {
+    font-family:sans-serif;
+    background:#333333;
+    color:#777777;
+    margin: 0 auto;
+}
+
+header, footer, aside, nav {
+    display: block;
+}
+
+#myCanvas {
+    display:block;
+    vertical-align:bottom;
+    background-color:#000000;
+}
