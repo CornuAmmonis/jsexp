@@ -259,7 +259,7 @@ var Renderer = function(config){
 window.onload = function() {
     var renderer = new Renderer({
         hard: 10.0,
-        rate: 8.0,
+        rate: 25.0,
         sharp: 10.0,
         exponent: 2.0,
         scale: 0.001
@@ -269,7 +269,7 @@ window.onload = function() {
     gui.add(renderer, 'hard').min(0.0).max(50.0).step(0.01).name("Hardness");
     gui.add(renderer, 'sharp').min(0.0).max(20.0).step(0.01).name("Sharpness");
     gui.add(renderer, 'exponent').min(0.0).max(5.0).step(0.01).name("Scale Exponent");
-    gui.add(renderer, 'scale').min(0.0).max(1.0).step(0.001).name("Prescale");
+    gui.add(renderer, 'scale').min(0.001).max(1.0).step(0.001).name("Prescale");
     gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
 
     renderer.init();
