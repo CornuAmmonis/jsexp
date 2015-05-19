@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Gaussian Pyramid McCabeism</title>
+        <link rel="stylesheet" type="text/css" href="softmax.css"/>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>
+        <script type="text/javascript" src="../3rd/dat.gui.js"></script>
+        <script type="text/javascript" src="../3rd/jquery-1.11.2.min.js"></script>
+        <script type="text/javascript" src="softmax.js"></script>
+        <script type="x-shader/x-vertex" id="standardVertexShader">
+            varying vec2 vUv;
+
+            void main()
+            {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="screenFragmentShader">
+            varying vec2 vUv;
+            uniform sampler2D iSource;
+
+            void main()
+            {
+                vec3 is = texture2D(iSource, vUv).xyz;
+                gl_FragColor = vec4(is, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="noiseFragmentShader">
+            varying vec2 vUv;
+
+            float rand(vec2 co){
+                return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+            }
+
+            void main()
+            {
+                float is = rand(vUv);
+                gl_FragColor = vec4(is);
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="gaussianPyramidVertexShader0">
+            varying vec2 blurTexCoords0[8];
+            varying vec2 blurTexCoords1[8];
+            varying vec2 blurTexCoords2[4];
+            varying vec2 blurTexCoords3[4];
+
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            void main()
+            {
+                float ix = 1.0 / screenWidth;
+                float iy = 1.0 / screenHeight;
+
+                blurTexCoords0[ 0] = uv + vec2(-ix * 4.0, 0.0);
+                blurTexCoords0[ 1] = uv + vec2(-ix * 3.0, 0.0);
+                blurTexCoords0[ 2] = uv + vec2(-ix * 2.0, 0.0);
+                blurTexCoords0[ 3] = uv + vec2(-ix * 1.0, 0.0);
+                blurTexCoords0[ 4] = uv + vec2( ix * 1.0, 0.0);
+                blurTexCoords0[ 5] = uv + vec2( ix * 2.0, 0.0);
+                blurTexCoords0[ 6] = uv + vec2( ix * 3.0, 0.0);
+                blurTexCoords0[ 7] = uv + vec2( ix * 4.0, 0.0);
+
+                blurTexCoords1[ 0] = uv + vec2(0.0, -iy * 4.0);
+                blurTexCoords1[ 1] = uv + vec2(0.0, -iy * 3.0);
+                blurTexCoords1[ 2] = uv + vec2(0.0, -iy * 2.0);
+                blurTexCoords1[ 3] = uv + vec2(0.0, -iy * 1.0);
+                blurTexCoords1[ 4] = uv + vec2(0.0,  iy * 1.0);
+                blurTexCoords1[ 5] = uv + vec2(0.0,  iy * 2.0);
+                blurTexCoords1[ 6] = uv + vec2(0.0,  iy * 3.0);
+                blurTexCoords1[ 7] = uv + vec2(0.0,  iy * 4.0);
+
+                blurTexCoords2[ 0] = uv + vec2(-ix * 8.0, 0.0);
+                blurTexCoords2[ 1] = uv + vec2(-ix * 6.0, 0.0);
+                blurTexCoords2[ 2] = uv + vec2( ix * 6.0, 0.0);
+                blurTexCoords2[ 3] = uv + vec2( ix * 8.0, 0.0);
+
+                blurTexCoords3[ 0] = uv + vec2(0.0, -iy * 8.0);
+                blurTexCoords3[ 1] = uv + vec2(0.0, -iy * 6.0);
+                blurTexCoords3[ 2] = uv + vec2(0.0,  iy * 6.0);
+                blurTexCoords3[ 3] = uv + vec2(0.0,  iy * 8.0);
+
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="gaussianPyramidVertexShader1">
+            varying vec2 blurTexCoords0[8];
+            varying vec2 blurTexCoords1[8];
+            varying vec2 blurTexCoords2[4];
+            varying vec2 blurTexCoords3[4];
+
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            void main()
+            {
+                float ix = 1.0 / screenWidth;
+                float iy = 1.0 / screenHeight;
+
+                blurTexCoords0[ 0] = uv + vec2(-ix * 16.0, 0.0);
+                blurTexCoords0[ 1] = uv + vec2(-ix * 12.0, 0.0);
+                blurTexCoords0[ 2] = uv + vec2(-ix *  8.0, 0.0);
+                blurTexCoords0[ 3] = uv + vec2(-ix *  4.0, 0.0);
+                blurTexCoords0[ 4] = uv + vec2( ix *  4.0, 0.0);
+                blurTexCoords0[ 5] = uv + vec2( ix *  8.0, 0.0);
+                blurTexCoords0[ 6] = uv + vec2( ix * 12.0, 0.0);
+                blurTexCoords0[ 7] = uv + vec2( ix * 16.0, 0.0);
+
+                blurTexCoords1[ 0] = uv + vec2(0.0, -iy * 16.0);
+                blurTexCoords1[ 1] = uv + vec2(0.0, -iy * 12.0);
+                blurTexCoords1[ 2] = uv + vec2(0.0, -iy *  8.0);
+                blurTexCoords1[ 3] = uv + vec2(0.0, -iy *  4.0);
+                blurTexCoords1[ 4] = uv + vec2(0.0,  iy *  4.0);
+                blurTexCoords1[ 5] = uv + vec2(0.0,  iy *  8.0);
+                blurTexCoords1[ 6] = uv + vec2(0.0,  iy * 12.0);
+                blurTexCoords1[ 7] = uv + vec2(0.0,  iy * 16.0);
+
+                blurTexCoords2[ 0] = uv + vec2(-ix * 32.0, 0.0);
+                blurTexCoords2[ 1] = uv + vec2(-ix * 24.0, 0.0);
+                blurTexCoords2[ 2] = uv + vec2( ix * 24.0, 0.0);
+                blurTexCoords2[ 3] = uv + vec2( ix * 32.0, 0.0);
+
+                blurTexCoords3[ 0] = uv + vec2(0.0, -iy * 32.0);
+                blurTexCoords3[ 1] = uv + vec2(0.0, -iy * 24.0);
+                blurTexCoords3[ 2] = uv + vec2(0.0,  iy * 24.0);
+                blurTexCoords3[ 3] = uv + vec2(0.0,  iy * 32.0);
+
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="gaussianPyramidVertexShader2">
+            varying vec2 blurTexCoords0[8];
+            varying vec2 blurTexCoords1[8];
+            varying vec2 blurTexCoords2[4];
+            varying vec2 blurTexCoords3[4];
+
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            void main()
+            {
+                float ix = 1.0 / screenWidth;
+                float iy = 1.0 / screenHeight;
+
+                blurTexCoords0[ 0] = uv + vec2(-ix * 64.0, 0.0);
+                blurTexCoords0[ 1] = uv + vec2(-ix * 48.0, 0.0);
+                blurTexCoords0[ 2] = uv + vec2(-ix * 32.0, 0.0);
+                blurTexCoords0[ 3] = uv + vec2(-ix * 16.0, 0.0);
+                blurTexCoords0[ 4] = uv + vec2( ix * 16.0, 0.0);
+                blurTexCoords0[ 5] = uv + vec2( ix * 32.0, 0.0);
+                blurTexCoords0[ 6] = uv + vec2( ix * 48.0, 0.0);
+                blurTexCoords0[ 7] = uv + vec2( ix * 64.0, 0.0);
+
+                blurTexCoords1[ 0] = uv + vec2(0.0, -iy * 64.0);
+                blurTexCoords1[ 1] = uv + vec2(0.0, -iy * 48.0);
+                blurTexCoords1[ 2] = uv + vec2(0.0, -iy * 32.0);
+                blurTexCoords1[ 3] = uv + vec2(0.0, -iy * 16.0);
+                blurTexCoords1[ 4] = uv + vec2(0.0,  iy * 16.0);
+                blurTexCoords1[ 5] = uv + vec2(0.0,  iy * 32.0);
+                blurTexCoords1[ 6] = uv + vec2(0.0,  iy * 48.0);
+                blurTexCoords1[ 7] = uv + vec2(0.0,  iy * 64.0);
+
+                blurTexCoords2[ 0] = uv + vec2(-ix * 128.0, 0.0);
+                blurTexCoords2[ 1] = uv + vec2(-ix *  96.0, 0.0);
+                blurTexCoords2[ 2] = uv + vec2( ix *  96.0, 0.0);
+                blurTexCoords2[ 3] = uv + vec2( ix * 128.0, 0.0);
+
+                blurTexCoords3[ 0] = uv + vec2(0.0, -iy * 128.0);
+                blurTexCoords3[ 1] = uv + vec2(0.0, -iy *  96.0);
+                blurTexCoords3[ 2] = uv + vec2(0.0,  iy *  96.0);
+                blurTexCoords3[ 3] = uv + vec2(0.0,  iy * 128.0);
+
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="gaussianPyramidVertexShader3">
+            varying vec2 blurTexCoords0[8];
+            varying vec2 blurTexCoords1[8];
+            varying vec2 blurTexCoords2[4];
+            varying vec2 blurTexCoords3[4];
+
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            void main()
+            {
+                float ix = 1.0 / screenWidth;
+                float iy = 1.0 / screenHeight;
+
+                blurTexCoords0[ 0] = uv + vec2(-ix * 256.0, 0.0);
+                blurTexCoords0[ 1] = uv + vec2(-ix * 192.0, 0.0);
+                blurTexCoords0[ 2] = uv + vec2(-ix * 128.0, 0.0);
+                blurTexCoords0[ 3] = uv + vec2(-ix *  64.0, 0.0);
+                blurTexCoords0[ 4] = uv + vec2( ix *  64.0, 0.0);
+                blurTexCoords0[ 5] = uv + vec2( ix * 128.0, 0.0);
+                blurTexCoords0[ 6] = uv + vec2( ix * 192.0, 0.0);
+                blurTexCoords0[ 7] = uv + vec2( ix * 256.0, 0.0);
+
+                blurTexCoords1[ 0] = uv + vec2(0.0, -iy * 256.0);
+                blurTexCoords1[ 1] = uv + vec2(0.0, -iy * 192.0);
+                blurTexCoords1[ 2] = uv + vec2(0.0, -iy * 128.0);
+                blurTexCoords1[ 3] = uv + vec2(0.0, -iy *  64.0);
+                blurTexCoords1[ 4] = uv + vec2(0.0,  iy *  64.0);
+                blurTexCoords1[ 5] = uv + vec2(0.0,  iy * 128.0);
+                blurTexCoords1[ 6] = uv + vec2(0.0,  iy * 192.0);
+                blurTexCoords1[ 7] = uv + vec2(0.0,  iy * 256.0);
+
+                blurTexCoords2[ 0] = uv + vec2(-ix * 512.0, 0.0);
+                blurTexCoords2[ 1] = uv + vec2(-ix * 384.0, 0.0);
+                blurTexCoords2[ 2] = uv + vec2( ix * 384.0, 0.0);
+                blurTexCoords2[ 3] = uv + vec2( ix * 512.0, 0.0);
+
+                blurTexCoords3[ 0] = uv + vec2(0.0, -iy * 512.0);
+                blurTexCoords3[ 1] = uv + vec2(0.0, -iy * 384.0);
+                blurTexCoords3[ 2] = uv + vec2(0.0,  iy * 384.0);
+                blurTexCoords3[ 3] = uv + vec2(0.0,  iy * 512.0);
+
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="gaussianPyramidFragmentShader">
+            uniform sampler2D iSource;
+            uniform sampler2D sSource;
+
+            varying vec2 blurTexCoords0[8];
+            varying vec2 blurTexCoords1[8];
+            varying vec2 blurTexCoords2[4];
+            varying vec2 blurTexCoords3[4];
+
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            void main()
+            {
+                float fx = 0.0;
+                float fy = 0.0;
+                float fz = 0.0;
+                float fw = 0.0;
+
+                // normalized gaussian with sigma = 2
+                fx += texture2D(iSource, blurTexCoords0[ 0]).w * 0.005172754662519048;
+                fx += texture2D(iSource, blurTexCoords0[ 1]).w * 0.02976714782325323;
+                fx += texture2D(iSource, blurTexCoords0[ 2]).w * 0.10389755476861752;
+                fx += texture2D(iSource, blurTexCoords0[ 3]).w * 0.21995112517117948;
+                fx += texture2D(iSource, vUv               ).w * 0.28242283514886135;
+                fx += texture2D(iSource, blurTexCoords0[ 4]).w * 0.21995112517117948;
+                fx += texture2D(iSource, blurTexCoords0[ 5]).w * 0.10389755476861752;
+                fx += texture2D(iSource, blurTexCoords0[ 6]).w * 0.02976714782325323;
+                fx += texture2D(iSource, blurTexCoords0[ 7]).w * 0.005172754662519048;
+
+                fy += texture2D(sSource, blurTexCoords1[ 0]).x * 0.005172754662519048;
+                fy += texture2D(sSource, blurTexCoords1[ 1]).x * 0.02976714782325323;
+                fy += texture2D(sSource, blurTexCoords1[ 2]).x * 0.10389755476861752;
+                fy += texture2D(sSource, blurTexCoords1[ 3]).x * 0.21995112517117948;
+                fy += texture2D(sSource, vUv               ).x * 0.28242283514886135;
+                fy += texture2D(sSource, blurTexCoords1[ 4]).x * 0.21995112517117948;
+                fy += texture2D(sSource, blurTexCoords1[ 5]).x * 0.10389755476861752;
+                fy += texture2D(sSource, blurTexCoords1[ 6]).x * 0.02976714782325323;
+                fy += texture2D(sSource, blurTexCoords1[ 7]).x * 0.005172754662519048;
+
+                fz += texture2D(sSource, blurTexCoords2[ 0]).y * 0.005172754662519048;
+                fz += texture2D(sSource, blurTexCoords2[ 1]).y * 0.02976714782325323;
+                fz += texture2D(sSource, blurTexCoords0[ 0]).y * 0.10389755476861752;
+                fz += texture2D(sSource, blurTexCoords0[ 2]).y * 0.21995112517117948;
+                fz += texture2D(sSource, vUv               ).y * 0.28242283514886135;
+                fz += texture2D(sSource, blurTexCoords0[ 5]).y * 0.21995112517117948;
+                fz += texture2D(sSource, blurTexCoords0[ 7]).y * 0.10389755476861752;
+                fz += texture2D(sSource, blurTexCoords2[ 2]).y * 0.02976714782325323;
+                fz += texture2D(sSource, blurTexCoords2[ 3]).y * 0.005172754662519048;
+
+                fw += texture2D(sSource, blurTexCoords3[ 0]).z * 0.005172754662519048;
+                fw += texture2D(sSource, blurTexCoords3[ 1]).z * 0.02976714782325323;
+                fw += texture2D(sSource, blurTexCoords1[ 0]).z * 0.10389755476861752;
+                fw += texture2D(sSource, blurTexCoords1[ 2]).z * 0.21995112517117948;
+                fw += texture2D(sSource, vUv               ).z * 0.28242283514886135;
+                fw += texture2D(sSource, blurTexCoords1[ 5]).z * 0.21995112517117948;
+                fw += texture2D(sSource, blurTexCoords1[ 7]).z * 0.10389755476861752;
+                fw += texture2D(sSource, blurTexCoords3[ 2]).z * 0.02976714782325323;
+                fw += texture2D(sSource, blurTexCoords3[ 3]).z * 0.005172754662519048;
+
+                gl_FragColor = vec4(fx, fy, fz, fw);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="mccabeFragmentShader">
+            varying vec2 vUv;
+            uniform sampler2D bSource0;
+            uniform sampler2D bSource1;
+            uniform sampler2D bSource2;
+            uniform sampler2D bSource3;
+            uniform sampler2D iSource;
+
+            uniform float hard;
+            uniform float rate;
+
+            void main()
+            {
+                // weights
+                vec4 a0 = vec4(0.001, 0.002, 0.004, 0.008);
+                vec4 a1 = vec4(0.012, 0.016, 0.024, 0.032);
+
+                vec4 one = vec4(1.0);
+
+                vec4 b0 = vec4(texture2D(bSource0, vUv).yw, texture2D(bSource1, vUv).yw);
+                vec4 b1 = vec4(texture2D(bSource2, vUv).yw, texture2D(bSource3, vUv).yw);
+                vec4 is = texture2D(iSource, vUv);
+
+                // difference of gaussians
+                vec4 dog0 = vec4(is.x - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b1.w);
+                vec4 dog1 = vec4(b1.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
+
+                // combined softmin and mccabe update rule
+                vec4 q0 = exp(- 10.0 * hard * abs(dog0));
+                vec4 q1 = exp(- 10.0 * hard * abs(dog1));
+                float n = dot(sign(dog0) * a0 * q0, one) + dot(sign(dog1) * a1 * q1, one);
+                float d = dot(q0, one) + dot(q1, one);
+
+                float final = clamp(is.x + rate * n/d, 0.0, 1.0);
+
+                gl_FragColor = vec4(final);
+
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="debugFragmentShader">
+            varying vec2 vUv;
+            uniform sampler2D bSource0;
+            uniform sampler2D bSource1;
+            uniform sampler2D bSource2;
+            uniform sampler2D bSource3;
+            uniform sampler2D iSource;
+
+            uniform float hard;
+
+            void main()
+            {
+                vec4 one = vec4(1.0);
+
+                vec4 b0 = vec4(texture2D(bSource0, vUv).yw, texture2D(bSource1, vUv).yw);
+                vec4 b1 = vec4(texture2D(bSource2, vUv).yw, texture2D(bSource3, vUv).yw);
+                vec4 is = texture2D(iSource, vUv);
+
+                float hh = hard * hard;
+                vec4 d0 = vec4(hh, 1.0 - 2.0 * hard + hh, 4.0 - 4.0 * hard + hh, 9.0 - 6.0 * hard + hh);
+                vec4 d1 = vec4(16.0 - 8.0 * hard + hh, 25.0 - 10.0 * hard + hh, 36.0 - 12.0 * hard + hh, 49.0 - 14.0 * hard + hh);
+
+                float n = dot(b0 / (one + d0), one)  + dot(b1 / (one + d1), one);
+                float d = dot(one / (one + d0), one) + dot(one / (one + d1), one);
+
+                gl_FragColor = vec4(n / d);
+            }
+        </script>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <div id="simulation">
+            <canvas id="myCanvas" class="viewer" style="width:1024px;height:1024px"></canvas>
+        </div>
+    </body>
+</html>
