@@ -305,13 +305,27 @@
             uniform sampler2D iSource;
 
             uniform float hard;
+            uniform float sharp;
+            uniform float exponent;
+            uniform float scale;
             uniform float rate;
+
+            vec4 sigmoid(vec4 x, float k) {
+                return (2.0 / (1.0 + exp(-k * x))) - 1.0;
+            }
 
             void main()
             {
                 // weights
-                vec4 a0 = vec4(0.001, 0.002, 0.004, 0.008);
-                vec4 a1 = vec4(0.012, 0.016, 0.024, 0.032);
+                //vec4 a0 = vec4(0.001, 0.002, 0.004, 0.008);
+                //vec4 a1 = vec4(0.012, 0.016, 0.024, 0.032);
+
+                vec4 i0 = vec4(1.0, 2.0, 3.0, 4.0);
+                vec4 i1 = vec4(5.0, 6.0, 7.0, 8.0);
+
+                vec4 ev = vec4(exponent);
+                vec4 a0 = scale * pow(i0, ev);
+                vec4 a1 = scale * pow(i1, ev);
 
                 vec4 one = vec4(1.0);
 
@@ -326,7 +340,7 @@
                 // combined softmin and mccabe update rule
                 vec4 q0 = exp(- 10.0 * hard * abs(dog0));
                 vec4 q1 = exp(- 10.0 * hard * abs(dog1));
-                float n = dot(sign(dog0) * a0 * q0, one) + dot(sign(dog1) * a1 * q1, one);
+                float n = dot(sigmoid(dog0, sharp) * a0 * q0, one) + dot(sigmoid(dog1, sharp) * a1 * q1, one);
                 float d = dot(q0, one) + dot(q1, one);
 
                 float final = clamp(is.x + rate * n/d, 0.0, 1.0);

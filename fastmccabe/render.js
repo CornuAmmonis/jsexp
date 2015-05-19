@@ -44,8 +44,11 @@ var Renderer = function(config){
     this.textureHeight = 1024;
 
     // Configuration.
-    this.hard = config.hard;
-    this.rate = config.rate;
+    this.hard     = config.hard;
+    this.rate     = config.rate;
+    this.sharp    = config.sharp;
+    this.exponent = config.exponent;
+    this.scale    = config.scale;
 
     this.mUniforms = {
         screenWidth:  {type: "f", value: undefined},
@@ -57,7 +60,10 @@ var Renderer = function(config){
         bSource3:     {type: "t", value: undefined},
         iSource:      {type: "t", value: undefined},
         hard:         {type: "f", value: this.hard},
-        rate:         {type: "f", value: this.rate}
+        rate:         {type: "f", value: this.rate},
+        sharp:        {type: "f", value: this.sharp},
+        exponent:     {type: "f", value: this.exponent},
+        scale:        {type: "f", value: this.scale}
     };
 
     this.init = function()
@@ -147,8 +153,11 @@ var Renderer = function(config){
 
     this.updateUniforms = function()
     {
-        this.mUniforms.hard.value = this.hard;
-        this.mUniforms.rate.value = this.rate;
+        this.mUniforms.hard.value     = this.hard;
+        this.mUniforms.rate.value     = this.rate;
+        this.mUniforms.sharp.value    = this.sharp;
+        this.mUniforms.exponent.value = this.exponent;
+        this.mUniforms.scale.value    = this.scale;
     };
 
     this.renderToTarget = function(material, iSource, sSource, target)
@@ -250,12 +259,18 @@ var Renderer = function(config){
 window.onload = function() {
     var renderer = new Renderer({
         hard: 10.0,
-        rate: 8.0
+        rate: 8.0,
+        sharp: 10.0,
+        exponent: 2.0,
+        scale: 0.001
     });
     var gui = new dat.GUI();
 
-    gui.add(renderer, 'hard').min(0.0).max(50.0).step(0.1).name("Hardness");
-    gui.add(renderer, 'rate').min(0.0).max(20.0).step(0.1).name("Rate");
+    gui.add(renderer, 'hard').min(0.0).max(50.0).step(0.01).name("Hardness");
+    gui.add(renderer, 'sharp').min(0.0).max(20.0).step(0.01).name("Sharpness");
+    gui.add(renderer, 'exponent').min(0.0).max(5.0).step(0.01).name("Scale Exponent");
+    gui.add(renderer, 'scale').min(0.0).max(1.0).step(0.001).name("Prescale");
+    gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
 
     renderer.init();
 };
