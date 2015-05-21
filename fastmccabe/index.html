@@ -245,6 +245,8 @@
             uniform float screenWidth;
             uniform float screenHeight;
 
+            uniform float stddev;
+
             #define I0(i) texture2D(iSource, blurTexCoords0[i]).w
             #define S0y(i) texture2D(sSource, blurTexCoords0[i]).y
             #define S2y(i) texture2D(sSource, blurTexCoords2[i]).y
@@ -252,35 +254,34 @@
             #define S1z(i) texture2D(sSource, blurTexCoords1[i]).z
             #define S3z(i) texture2D(sSource, blurTexCoords3[i]).z
 
+            float gaussian(float x, float s) {
+                return exp(-x*x/(s*s));
+            }
+
+            vec4 gaussian(vec4 x, float s) {
+                return exp(-x*x/(s*s));
+            }
+
             void main()
             {
-                vec4 f = vec4(0.0);
 
-                /* sigma = 2
-                    0.005172754662519048;
-                    0.02976714782325323;
-                    0.10389755476861752;
-                    0.21995112517117948;
-                    0.28242283514886135;
-                    0.21995112517117948;
-                    0.10389755476861752;
-                    0.02976714782325323;
-                    0.005172754662519048;
-                */
+                vec4 i = vec4(-4.0, -3.0, -2.0, -1.0);
+                vec4 g0 = gaussian(i, stddev);
+                float g = gaussian(0.0, stddev);
+                float sum = 2.0 * (g0.x + g0.y + g0.z + g0.w) + g;
+                g0 /= sum;
+                g /= sum;
 
                 float IC = texture2D(iSource, vUv).w;
-                vec3  SC = texture2D(sSource, vUv).xyz;
+                vec3 SC = texture2D(sSource, vUv).xyz;
 
-                // normalized gaussian with sigma = 3
-                f += vec4(I0(0), S1x(0), S2y(0), S3z(0)) * 0.0328447465496729;
-                f += vec4(I0(1), S1x(1), S2y(1), S3z(1)) * 0.071490858439652;
-                f += vec4(I0(2), S1x(2), S0y(0), S1z(0)) * 0.12460206049450015;
-                f += vec4(I0(3), S1x(3), S0y(2), S1z(2)) * 0.17389618381745298;
-                f += vec4(IC   , SC                    ) * 0.19433230139744398;
-                f += vec4(I0(4), S1x(4), S0y(5), S1z(5)) * 0.17389618381745298;
-                f += vec4(I0(5), S1x(5), S0y(7), S1z(7)) * 0.12460206049450015;
-                f += vec4(I0(6), S1x(6), S2y(2), S3z(2)) * 0.071490858439652;
-                f += vec4(I0(7), S1x(7), S2y(3), S3z(3)) * 0.0328447465496729;
+                // four 9-point 1D gaussian convolutions
+                vec4 f = vec4(0.0);
+                f += (vec4(I0(0), S1x(0), S2y(0), S3z(0)) + vec4(I0(7), S1x(7), S2y(3), S3z(3))) * g0.x;
+                f += (vec4(I0(1), S1x(1), S2y(1), S3z(1)) + vec4(I0(6), S1x(6), S2y(2), S3z(2))) * g0.y;
+                f += (vec4(I0(2), S1x(2), S0y(0), S1z(0)) + vec4(I0(5), S1x(5), S0y(7), S1z(7))) * g0.z;
+                f += (vec4(I0(3), S1x(3), S0y(2), S1z(2)) + vec4(I0(4), S1x(4), S0y(5), S1z(5))) * g0.w;
+                f += vec4(IC, SC) * g;
 
                 gl_FragColor = vec4(f);
             }
@@ -305,14 +306,11 @@
 
             void main()
             {
-                // weights
-                //vec4 a0 = vec4(0.001, 0.002, 0.004, 0.008);
-                //vec4 a1 = vec4(0.012, 0.016, 0.024, 0.032);
-
                 vec4 i0 = vec4(1.0, 2.0, 3.0, 4.0);
                 vec4 i1 = vec4(5.0, 6.0, 7.0, 8.0);
 
                 vec4 ev = vec4(exponent);
+                // weights
                 vec4 a0 = scale * pow(i0, ev);
                 vec4 a1 = scale * pow(i1, ev);
 

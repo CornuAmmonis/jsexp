@@ -29,6 +29,7 @@ var Renderer = function(config){
     this.mTexture7 = undefined;
     this.mTexture8 = undefined;
     this.mTexture9 = undefined;
+    this.debugTexture = undefined;
     this.mScreenQuad = undefined;
 
     this.mccabeMaterial = undefined;
@@ -49,6 +50,9 @@ var Renderer = function(config){
     this.sharp    = config.sharp;
     this.exponent = config.exponent;
     this.scale    = config.scale;
+    this.stddev   = config.stddev;
+
+    this.debug = false;
 
     this.mUniforms = {
         screenWidth:  {type: "f", value: undefined},
@@ -63,7 +67,18 @@ var Renderer = function(config){
         rate:         {type: "f", value: this.rate},
         sharp:        {type: "f", value: this.sharp},
         exponent:     {type: "f", value: this.exponent},
-        scale:        {type: "f", value: this.scale}
+        scale:        {type: "f", value: this.scale},
+        stddev:       {type: "f", value: this.stddev}
+    };
+
+    this.updateUniforms = function()
+    {
+        this.mUniforms.hard.value     = this.hard;
+        this.mUniforms.rate.value     = this.rate;
+        this.mUniforms.sharp.value    = this.sharp;
+        this.mUniforms.exponent.value = this.exponent;
+        this.mUniforms.scale.value    = this.scale;
+        this.mUniforms.stddev.value   = this.stddev;
     };
 
     this.init = function()
@@ -132,7 +147,7 @@ var Renderer = function(config){
         this.mTexture7 = this.getWrappedRenderTarget();
         this.mTexture8 = this.getWrappedRenderTarget();
         this.mTexture9 = this.getWrappedRenderTarget();
-        this.dummyTexture = this.getWrappedRenderTarget();
+        this.debugTexture = this.getWrappedRenderTarget();
 
         this.mUniforms.screenWidth.value = this.textureWidth;
         this.mUniforms.screenHeight.value = this.textureHeight;
@@ -151,15 +166,6 @@ var Renderer = function(config){
         });
     };
 
-    this.updateUniforms = function()
-    {
-        this.mUniforms.hard.value     = this.hard;
-        this.mUniforms.rate.value     = this.rate;
-        this.mUniforms.sharp.value    = this.sharp;
-        this.mUniforms.exponent.value = this.exponent;
-        this.mUniforms.scale.value    = this.scale;
-    };
-
     this.renderToTarget = function(material, iSource, sSource, target)
     {
         this.mScreenQuad.material = material;
@@ -168,9 +174,9 @@ var Renderer = function(config){
         this.mRenderer.render(this.mScene, this.mCamera, target, true);
     };
 
-    this.mccabeToTarget = function(iSource, bSource0, bSource1, bSource2, bSource3, target)
+    this.renderToFinalTarget = function(material, iSource, bSource0, bSource1, bSource2, bSource3, target)
     {
-        this.mScreenQuad.material = this.mccabeMaterial;
+        this.mScreenQuad.material = material;
         this.mUniforms.iSource.value = iSource;
         this.mUniforms.bSource0.value = bSource0;
         this.mUniforms.bSource1.value = bSource1;
@@ -193,15 +199,25 @@ var Renderer = function(config){
             this.renderToTarget(this.pass1Material, this.mTexture2, this.mTexture3, this.mTexture4);
             this.renderToTarget(this.pass2Material, this.mTexture4, this.mTexture5, this.mTexture6);
             this.renderToTarget(this.pass3Material, this.mTexture6, this.mTexture7, this.mTexture8);
-            this.mccabeToTarget(this.mTexture0, this.mTexture2, this.mTexture4, this.mTexture6, this.mTexture8, this.mTexture9);
-            imageTexture = this.mTexture9;
+            this.renderToFinalTarget(this.mccabeMaterial, this.mTexture0, this.mTexture2, this.mTexture4, this.mTexture6, this.mTexture8, this.mTexture9);
+            if (this.debug) {
+                this.renderToFinalTarget(this.debugMaterial, this.mTexture0, this.mTexture2, this.mTexture4, this.mTexture6, this.mTexture8, this.debugTexture);
+                imageTexture = this.debugTexture;
+            } else {
+                imageTexture = this.mTexture9;
+            }
         } else {
             this.renderToTarget(this.pass0Material, this.mTexture9, this.mTexture2, this.mTexture1);
             this.renderToTarget(this.pass1Material, this.mTexture1, this.mTexture4, this.mTexture3);
             this.renderToTarget(this.pass2Material, this.mTexture3, this.mTexture6, this.mTexture5);
             this.renderToTarget(this.pass3Material, this.mTexture5, this.mTexture8, this.mTexture7);
-            this.mccabeToTarget(this.mTexture9, this.mTexture1, this.mTexture3, this.mTexture5, this.mTexture7, this.mTexture0);
-            imageTexture = this.mTexture0;
+            this.renderToFinalTarget(this.mccabeMaterial, this.mTexture9, this.mTexture1, this.mTexture3, this.mTexture5, this.mTexture7, this.mTexture0);
+            if (this.debug) {
+                this.renderToFinalTarget(this.debugMaterial, this.mTexture9, this.mTexture1, this.mTexture3, this.mTexture5, this.mTexture7, this.debugTexture);
+                imageTexture = this.debugTexture;
+            } else {
+                imageTexture = this.mTexture0;
+            }
         }
 
         this.mUniforms.iSource.value = imageTexture;
@@ -222,11 +238,9 @@ var Renderer = function(config){
         window.open(dataURL, "name-"+Math.random());
     };
 
-    this.debug = function()
+    this.toggleDebug = function()
     {
-        var temp = this.debugScreenMaterial;
-        this.debugScreenMaterial = this.screenMaterial;
-        this.screenMaterial = temp;
+        this.debug = !this.debug;
     };
 
     this.onResize = function()
@@ -262,6 +276,7 @@ window.onload = function() {
         rate: 25.0,
         sharp: 10.0,
         exponent: 2.0,
+        stddev: 4.0,
         scale: 0.001
     });
     var gui = new dat.GUI();
@@ -271,6 +286,8 @@ window.onload = function() {
     gui.add(renderer, 'exponent').min(-5.0).max(5.0).step(0.01).name("Scale Exponent");
     gui.add(renderer, 'scale').min(0.001).max(1.0).step(0.001).name("Prescale");
     gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
+    gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
+    gui.add(renderer, 'toggleDebug').name("Debug View");
 
     renderer.init();
 };
