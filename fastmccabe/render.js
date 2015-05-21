@@ -268,7 +268,7 @@ window.onload = function() {
 
     gui.add(renderer, 'hard').min(0.0).max(50.0).step(0.01).name("Hardness");
     gui.add(renderer, 'sharp').min(0.0).max(20.0).step(0.01).name("Sharpness");
-    gui.add(renderer, 'exponent').min(0.0).max(5.0).step(0.01).name("Scale Exponent");
+    gui.add(renderer, 'exponent').min(-5.0).max(5.0).step(0.01).name("Scale Exponent");
     gui.add(renderer, 'scale').min(0.001).max(1.0).step(0.001).name("Prescale");
     gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
 
