@@ -22,8 +22,8 @@
 
             void main()
             {
-                vec3 is = texture2D(iSource, vUv).xyz;
-                gl_FragColor = vec4(is, 1.0);
+                vec4 is = texture2D(iSource, vUv);
+                gl_FragColor = vec4(is.xyz, 1.0);
             }
         </script>
         <script type="x-shader/x-fragment" id="noiseFragmentShader">
@@ -275,7 +275,7 @@
                 float IC = texture2D(iSource, vUv).w;
                 vec3 SC = texture2D(sSource, vUv).xyz;
 
-                // four 9-point 1D gaussian convolutions
+                // four 9-point 1D truncated gaussian convolutions
                 vec4 f = vec4(0.0);
                 f += (vec4(I0(0), S1x(0), S2y(0), S3z(0)) + vec4(I0(7), S1x(7), S2y(3), S3z(3))) * g0.x;
                 f += (vec4(I0(1), S1x(1), S2y(1), S3z(1)) + vec4(I0(6), S1x(6), S2y(2), S3z(2))) * g0.y;
@@ -299,9 +299,42 @@
             uniform float exponent;
             uniform float scale;
             uniform float rate;
+            uniform float hystj;
+            uniform float hystk;
 
-            vec4 sigmoid(vec4 x, float k) {
-                return (2.0 / (1.0 + exp(-k * x))) - 1.0;
+            // clamp to avoid under/overflow, with a little headroom (highp range is 2^-62 to 2^62)
+            vec4 underflowClamp(vec4 x) {
+                return clamp(x, -42.9, 42.9);
+            }
+
+            float underflowClamp(float x) {
+                return clamp(x, -42.9, 42.9);
+            }
+
+            vec4 expUC(vec4 x) {
+                return exp(underflowClamp(x));
+            }
+
+            float expUC(float x) {
+                return exp(underflowClamp(x));
+            }
+
+            /*  Wolfram CDF code for reference:
+                Manipulate[ Plot3D[Coth[k]*(1/(1 + E^(j*x)) - 1/(1 + E^(j*x + k * y))),
+                {x, -1, 1}, {y, -1, 1}, Mesh -> Automatic, MeshFunctions -> {#3 &},
+                PlotRange -> {-1, 1}], {k, 0.001, 50.0}, {j, 0.001, 10.0}]
+            */
+            float hysteresis(float x, float dx, float j, float k) {
+                float jx = 2.0 * j * (x - 0.5);
+                float exp_jx = 1.0 + expUC(jx);
+                float exp_jxkdx = 1.0 + expUC(jx + k * dx);
+                float exp_2k = expUC(2.0 * k);
+                float cothk = (exp_2k + 1.0)/(exp_2k - 1.0);
+                return (cothk / exp_jx) - (cothk / exp_jxkdx);
+            }
+
+            vec4 sigmoid(vec4 x, vec4 k) {
+                return (2.0 / (1.0 + expUC(-k * x))) - 1.0;
             }
 
             void main()
@@ -310,6 +343,8 @@
                 vec4 i1 = vec4(5.0, 6.0, 7.0, 8.0);
 
                 vec4 ev = vec4(exponent);
+                vec4 sv = vec4(sharp);
+
                 // weights
                 vec4 a0 = scale * pow(i0, ev);
                 vec4 a1 = scale * pow(i1, ev);
@@ -325,13 +360,13 @@
                 vec4 dog1 = vec4(b1.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
 
                 // combined softmin and mccabe update rule
-                vec4 q0 = exp(- 10.0 * hard * abs(dog0));
-                vec4 q1 = exp(- 10.0 * hard * abs(dog1));
-                float n = dot(sigmoid(dog0, sharp) * a0 * q0, one) + dot(sigmoid(dog1, sharp) * a1 * q1, one);
+                vec4 q0 = expUC(- 10.0 * hard * abs(dog0));
+                vec4 q1 = expUC(- 10.0 * hard * abs(dog1));
+                float n = dot(sigmoid(dog0, sv) * a0 * q0, one) + dot(sigmoid(dog1, sv) * a1 * q1, one);
                 float d = dot(q0, one) + dot(q1, one);
 
-                float final = clamp(is.x + rate * n/d, 0.0, 1.0);
-
+                float dx = rate * hysteresis(is.x, n/d, hystj, hystk);
+                float final = clamp(is.x + dx, 0.0, 1.0);
                 gl_FragColor = vec4(final);
 
             }
@@ -344,22 +379,23 @@
             uniform sampler2D bSource3;
             uniform sampler2D iSource;
 
-            uniform float hard;
+            uniform float blurl;
 
             void main()
             {
                 vec4 one = vec4(1.0);
+                vec4 off = vec4(0.1);
 
                 vec4 b0 = vec4(texture2D(bSource0, vUv).yw, texture2D(bSource1, vUv).yw);
                 vec4 b1 = vec4(texture2D(bSource2, vUv).yw, texture2D(bSource3, vUv).yw);
                 vec4 is = texture2D(iSource, vUv);
 
-                float hh = hard * hard;
-                vec4 d0 = vec4(hh, 1.0 - 2.0 * hard + hh, 4.0 - 4.0 * hard + hh, 9.0 - 6.0 * hard + hh);
-                vec4 d1 = vec4(16.0 - 8.0 * hard + hh, 25.0 - 10.0 * hard + hh, 36.0 - 12.0 * hard + hh, 49.0 - 14.0 * hard + hh);
+                float bb = blurl * blurl;
+                vec4 d0 = vec4(bb, 1.0 - 2.0 * blurl + bb, 4.0 - 4.0 * blurl + bb, 9.0 - 6.0 * blurl + bb);
+                vec4 d1 = vec4(16.0 - 8.0 * blurl + bb, 25.0 - 10.0 * blurl + bb, 36.0 - 12.0 * blurl + bb, 49.0 - 14.0 * blurl + bb);
 
-                float n = dot(b0 / (one + d0), one)  + dot(b1 / (one + d1), one);
-                float d = dot(one / (one + d0), one) + dot(one / (one + d1), one);
+                float n = dot(b0  / (off + d0), one) + dot(b1  / (off + d1), one);
+                float d = dot(one / (off + d0), one) + dot(one / (off + d1), one);
 
                 gl_FragColor = vec4(n / d);
             }

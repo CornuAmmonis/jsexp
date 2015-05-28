@@ -51,6 +51,9 @@ var Renderer = function(config){
     this.exponent = config.exponent;
     this.scale    = config.scale;
     this.stddev   = config.stddev;
+    this.hystj    = config.hystj;
+    this.hystk    = config.hystk;
+    this.blurl    = config.blurl;
 
     this.debug = false;
 
@@ -68,7 +71,10 @@ var Renderer = function(config){
         sharp:        {type: "f", value: this.sharp},
         exponent:     {type: "f", value: this.exponent},
         scale:        {type: "f", value: this.scale},
-        stddev:       {type: "f", value: this.stddev}
+        stddev:       {type: "f", value: this.stddev},
+        hystj:        {type: "f", value: this.hystj},
+        hystk:        {type: "f", value: this.hystk},
+        blurl:        {type: "f", value: this.blurl}
     };
 
     this.updateUniforms = function()
@@ -79,6 +85,9 @@ var Renderer = function(config){
         this.mUniforms.exponent.value = this.exponent;
         this.mUniforms.scale.value    = this.scale;
         this.mUniforms.stddev.value   = this.stddev;
+        this.mUniforms.hystj.value    = this.hystj;
+        this.mUniforms.hystk.value    = this.hystk;
+        this.mUniforms.blurl.value    = this.blurl;
     };
 
     this.init = function()
@@ -277,7 +286,10 @@ window.onload = function() {
         sharp: 10.0,
         exponent: 2.0,
         stddev: 4.0,
-        scale: 0.001
+        scale: 0.001,
+        hystj: 5.0,
+        hystk: 20.0,
+        blurl: 4.0
     });
     var gui = new dat.GUI();
 
@@ -287,7 +299,11 @@ window.onload = function() {
     gui.add(renderer, 'scale').min(0.001).max(1.0).step(0.001).name("Prescale");
     gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
     gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
+    gui.add(renderer, 'hystj').min(0.01).max(10.0).step(0.01).name("Hysteresis Scale");
+    gui.add(renderer, 'hystk').min(0.01).max(40.0).step(0.01).name("Hysteresis Delta");
+    gui.add(renderer, 'blurl').min(0.0).max(7.0).step(0.01).name("Debug View Ctrl");
     gui.add(renderer, 'toggleDebug').name("Debug View");
+    gui.add(renderer, 'snapshot').name("Screenshot");
 
     renderer.init();
 };
