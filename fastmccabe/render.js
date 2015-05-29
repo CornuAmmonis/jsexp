@@ -40,6 +40,7 @@ var Renderer = function(config){
     this.pass2Material  = undefined;
     this.pass3Material  = undefined;
     this.screenMaterial = undefined;
+    this.standardScreenMaterial = undefined;
 
     this.textureWidth = 1024;
     this.textureHeight = 1024;
@@ -123,6 +124,7 @@ var Renderer = function(config){
         this.mCamera.position.z = 0;
         this.mScene.add(this.mCamera);
 
+        this.standardScreenMaterial = this.getMaterial('standardVertexShader', 'standardScreenFragmentShader');
         this.screenMaterial = this.getMaterial('standardVertexShader', 'screenFragmentShader');
         this.mccabeMaterial = this.getMaterial('standardVertexShader', 'mccabeFragmentShader');
         this.debugMaterial  = this.getMaterial('standardVertexShader', 'debugFragmentShader');
@@ -194,6 +196,17 @@ var Renderer = function(config){
         this.mRenderer.render(this.mScene, this.mCamera, target, true);
     };
 
+    this.renderToScreen = function(material, iSource, bSource0, bSource1, bSource2, bSource3)
+    {
+        this.mScreenQuad.material = material;
+        this.mUniforms.iSource.value = iSource;
+        this.mUniforms.bSource0.value = bSource0;
+        this.mUniforms.bSource1.value = bSource1;
+        this.mUniforms.bSource2.value = bSource2;
+        this.mUniforms.bSource3.value = bSource3;
+        this.mRenderer.render(this.mScene, this.mCamera);
+    };
+
     this.render = function()
     {
         this.updateUniforms();
@@ -229,9 +242,12 @@ var Renderer = function(config){
             }
         }
 
-        this.mUniforms.iSource.value = imageTexture;
-        this.mScreenQuad.material = this.screenMaterial;
-        this.mRenderer.render(this.mScene, this.mCamera);
+        var screenMaterial = this.debug ? this.standardScreenMaterial : this.screenMaterial;
+        if (this.uiStep % 2 == 0) {
+            this.renderToScreen(screenMaterial, imageTexture, this.mTexture2, this.mTexture4, this.mTexture6, this.mTexture8);
+        } else {
+            this.renderToScreen(screenMaterial, imageTexture, this.mTexture1, this.mTexture3, this.mTexture5, this.mTexture7);
+        }
 
         this.uiStep++;
         requestAnimationFrame(this.render.bind(this));
@@ -303,6 +319,7 @@ window.onload = function() {
     gui.add(renderer, 'hystk').min(-40.0).max(40.0).step(0.01).name("Hysteresis Delta");
     gui.add(renderer, 'blurl').min(0.0).max(7.0).step(0.01).name("Debug View Ctrl");
     gui.add(renderer, 'toggleDebug').name("Debug View");
+    gui.add(renderer, 'resetCounter').name("Reset");
     gui.add(renderer, 'snapshot').name("Screenshot");
 
     renderer.init();

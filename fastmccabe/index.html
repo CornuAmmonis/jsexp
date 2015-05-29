@@ -16,12 +16,50 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
         </script>
-        <script type="x-shader/x-fragment" id="screenFragmentShader">
+        <script type="x-shader/x-fragment" id="standardScreenFragmentShader">
             varying vec2 vUv;
             uniform sampler2D iSource;
 
             void main()
             {
+                vec4 is = (texture2D(iSource, vUv) + 1.0) / 2.0;
+                gl_FragColor = vec4(is.xyz, 1.0);
+            }
+        </script>
+        <script type="x-shader/x-fragment" id="screenFragmentShader">
+            varying vec2 vUv;
+            uniform sampler2D iSource;
+            uniform sampler2D bSource0;
+            uniform sampler2D bSource1;
+            uniform sampler2D bSource2;
+            uniform sampler2D bSource3;
+
+            void main()
+            {
+                /*
+                vec4 is = texture2D(iSource, vUv);
+                vec4 b0 = vec4(texture2D(bSource0, vUv).yw, texture2D(bSource1, vUv).yw);
+                vec4 b1 = vec4(texture2D(bSource2, vUv).yw, texture2D(bSource3, vUv).yw);
+
+                vec4 dog0 = vec4(is.x - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b0.w);
+                vec4 dog1 = vec4(b0.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
+
+                float a = 1.0;
+                vec4 a0 = vec4(2.0, 3.0, 4.0, 5.0);
+                vec4 a1 = vec4(6.0, 7.0, 8.0, 9.0);
+
+                float s = 0.2;
+                float p = 0.2;
+
+                a = s * pow(a, p);
+                a0 = s * pow(a0, vec4(p));
+                a1 = s * pow(a1, vec4(p));
+
+                vec4 one = vec4(1.0);
+
+                float final = dot(dog0 * a0, one) + dot(dog1 * a1, one);
+                gl_FragColor = vec4(vec3(0.5 * (final + 1.0)), 1.0);
+                */
                 vec4 is = (texture2D(iSource, vUv) + 1.0) / 2.0;
                 gl_FragColor = vec4(is.xyz, 1.0);
             }
@@ -361,8 +399,8 @@
                 vec4 is = texture2D(iSource, vUv);
 
                 // difference of gaussians
-                vec4 dog0 = vec4(is.x - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b1.w);
-                vec4 dog1 = vec4(b1.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
+                vec4 dog0 = vec4(is.x - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b0.w);
+                vec4 dog1 = vec4(b0.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
 
                 // combined softmin and mccabe update rule
                 vec4 q0 = g0 * expUC(- 10.0 * hard * abs(dog0));
