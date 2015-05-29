@@ -293,14 +293,14 @@ window.onload = function() {
     });
     var gui = new dat.GUI();
 
-    gui.add(renderer, 'hard').min(0.0).max(50.0).step(0.01).name("Softmin Curve");
-    gui.add(renderer, 'sharp').min(0.0).max(20.0).step(0.01).name("Sign Curve");
+    gui.add(renderer, 'hard').min(-50.0).max(50.0).step(0.01).name("Softmin Curve");
+    gui.add(renderer, 'sharp').min(-20.0).max(20.0).step(0.01).name("Sign Curve");
     gui.add(renderer, 'exponent').min(-5.0).max(5.0).step(0.01).name("Scale Exponent");
-    gui.add(renderer, 'scale').min(0.001).max(1.0).step(0.001).name("Prescale");
+    gui.add(renderer, 'scale').min(0.001).max(5.0).step(0.001).name("Prescale");
     gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
     gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
-    gui.add(renderer, 'hystj').min(0.01).max(10.0).step(0.01).name("Hysteresis Scale");
-    gui.add(renderer, 'hystk').min(0.01).max(40.0).step(0.01).name("Hysteresis Delta");
+    gui.add(renderer, 'hystj').min(-10.0).max(10.0).step(0.01).name("Hysteresis Scale");
+    gui.add(renderer, 'hystk').min(-40.0).max(40.0).step(0.01).name("Hysteresis Delta");
     gui.add(renderer, 'blurl').min(0.0).max(7.0).step(0.01).name("Debug View Ctrl");
     gui.add(renderer, 'toggleDebug').name("Debug View");
     gui.add(renderer, 'snapshot').name("Screenshot");

@@ -22,7 +22,7 @@
 
             void main()
             {
-                vec4 is = texture2D(iSource, vUv);
+                vec4 is = (texture2D(iSource, vUv) + 1.0) / 2.0;
                 gl_FragColor = vec4(is.xyz, 1.0);
             }
         </script>
@@ -325,11 +325,13 @@
                 PlotRange -> {-1, 1}], {k, 0.001, 50.0}, {j, 0.001, 10.0}]
             */
             float hysteresis(float x, float dx, float j, float k) {
-                float jx = 2.0 * j * (x - 0.5);
+                //float jx = 2.0 * j * (x - 0.5);
+                float jx = j * x;
                 float exp_jx = 1.0 + expUC(jx);
                 float exp_jxkdx = 1.0 + expUC(jx + k * dx);
-                float exp_2k = expUC(2.0 * k);
-                float cothk = (exp_2k + 1.0)/(exp_2k - 1.0);
+                float exp_pk = expUC(k);
+                float exp_nk = expUC(-k);
+                float cothk = (exp_pk + exp_nk)/(exp_pk - exp_nk);
                 return (cothk / exp_jx) - (cothk / exp_jxkdx);
             }
 
@@ -341,6 +343,9 @@
             {
                 vec4 i0 = vec4(1.0, 2.0, 3.0, 4.0);
                 vec4 i1 = vec4(5.0, 6.0, 7.0, 8.0);
+
+                vec4 g0 = vec4(0.0, 1.0, 1.0, 1.0);
+                vec4 g1 = vec4(1.0, 1.0, 1.0, 1.0);
 
                 vec4 ev = vec4(exponent);
                 vec4 sv = vec4(sharp);
@@ -360,13 +365,13 @@
                 vec4 dog1 = vec4(b1.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
 
                 // combined softmin and mccabe update rule
-                vec4 q0 = expUC(- 10.0 * hard * abs(dog0));
-                vec4 q1 = expUC(- 10.0 * hard * abs(dog1));
+                vec4 q0 = g0 * expUC(- 10.0 * hard * abs(dog0));
+                vec4 q1 = g1 * expUC(- 10.0 * hard * abs(dog1));
                 float n = dot(sigmoid(dog0, sv) * a0 * q0, one) + dot(sigmoid(dog1, sv) * a1 * q1, one);
                 float d = dot(q0, one) + dot(q1, one);
 
                 float dx = rate * hysteresis(is.x, n/d, hystj, hystk);
-                float final = clamp(is.x + dx, 0.0, 1.0);
+                float final = clamp(is.x + dx, -1.0, 1.0);
                 gl_FragColor = vec4(final);
 
             }
