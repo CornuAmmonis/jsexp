@@ -299,21 +299,21 @@ window.onload = function() {
     var renderer = new Renderer({
         hard: 10.0,
         rate: 25.0,
-        sharp: 10.0,
-        exponent: 2.0,
-        stddev: 4.0,
-        scale: 0.001,
-        hystj: 5.0,
-        hystk: 20.0,
+        sharp: 1.0,
+        exponent: 1.0,
+        stddev: 3.0,
+        scale: 0.01,
+        hystj: 0.0,
+        hystk: 10.0,
         blurl: 4.0
     });
     var gui = new dat.GUI();
 
-    gui.add(renderer, 'hard').min(-50.0).max(50.0).step(0.01).name("Softmin Curve");
-    gui.add(renderer, 'sharp').min(-20.0).max(20.0).step(0.01).name("Sign Curve");
+    gui.add(renderer, 'hard').min(0.0).max(50.0).step(0.01).name("Softmin Curve");
+    gui.add(renderer, 'sharp').min(0.0).max(20.0).step(0.01).name("Sign Curve");
     gui.add(renderer, 'exponent').min(-5.0).max(5.0).step(0.01).name("Scale Exponent");
-    gui.add(renderer, 'scale').min(0.001).max(5.0).step(0.001).name("Prescale");
-    gui.add(renderer, 'rate').min(0.0).max(50.0).step(0.01).name("Rate");
+    gui.add(renderer, 'scale').min(0.001).max(1.0).step(0.001).name("Prescale");
+    gui.add(renderer, 'rate').min(0.0).max(100.0).step(0.01).name("Rate");
     gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
     gui.add(renderer, 'hystj').min(-10.0).max(10.0).step(0.01).name("Hysteresis Scale");
     gui.add(renderer, 'hystk').min(-40.0).max(40.0).step(0.01).name("Hysteresis Delta");
