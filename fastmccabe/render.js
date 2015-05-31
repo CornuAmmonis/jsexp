@@ -297,7 +297,7 @@ var Renderer = function(config){
 
 window.onload = function() {
     var renderer = new Renderer({
-        hard: 10.0,
+        hard: 40.0,
         rate: 25.0,
         sharp: 1.0,
         exponent: 1.0,

@@ -60,7 +60,20 @@
                 float final = dot(dog0 * a0, one) + dot(dog1 * a1, one);
                 gl_FragColor = vec4(vec3(0.5 * (final + 1.0)), 1.0);
                 */
-                vec4 is = (texture2D(iSource, vUv) + 1.0) / 2.0;
+                /*
+                float b0 = texture2D(bSource0, vUv).y;
+                float b1 = texture2D(bSource0, vUv).w;
+                float b2 = texture2D(bSource1, vUv).y;
+                float b3 = texture2D(bSource1, vUv).w;
+                float a = texture2D(iSource, vUv).x;
+                float m0 = mix(a,  b0, abs(a * a));
+                float m1 = mix(m0, b1, abs(m0 * m0));
+                float m2 = mix(m1, b2, abs(m1 * m1));
+                float m3 = mix(m2, b3, abs(m2 * m2));
+                vec4 is = (vec4(m3) + 1.0) * 0.5;
+                gl_FragColor = vec4(is.xyz, 1.0);
+                */
+                vec4 is = (texture2D(iSource, vUv) + 1.0) * 0.5;
                 gl_FragColor = vec4(is.xyz, 1.0);
             }
         </script>
