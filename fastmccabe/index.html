@@ -282,7 +282,63 @@
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
         </script>
-        <script type="x-shader/x-vertex" id="gaussianPyramidFragmentShader">
+        <script type="x-shader/x-vertex" id="gaussianPyramidFragmentShader0">
+            uniform sampler2D iSource;
+            uniform sampler2D sSource;
+
+            varying vec2 blurTexCoords0[8];
+            varying vec2 blurTexCoords1[8];
+            varying vec2 blurTexCoords2[4];
+            varying vec2 blurTexCoords3[4];
+
+            varying vec2 vUv;
+
+            uniform float screenWidth;
+            uniform float screenHeight;
+
+            uniform float stddev;
+
+            #define I0(i) dot(texture2D(iSource, blurTexCoords0[i]), vec4(1.0, 1.0, 1.0, 0.0))/3.0
+            #define S0y(i) texture2D(sSource, blurTexCoords0[i]).y
+            #define S2y(i) texture2D(sSource, blurTexCoords2[i]).y
+            #define S1x(i) texture2D(sSource, blurTexCoords1[i]).x
+            #define S1z(i) texture2D(sSource, blurTexCoords1[i]).z
+            #define S3z(i) texture2D(sSource, blurTexCoords3[i]).z
+
+            float gaussian(float x, float s) {
+                return exp(-x*x/(s*s));
+            }
+
+            vec4 gaussian(vec4 x, float s) {
+                return exp(-x*x/(s*s));
+            }
+
+            void main()
+            {
+
+                vec4 i = vec4(-4.0, -3.0, -2.0, -1.0);
+                vec4 g0 = gaussian(i, stddev);
+                float g = gaussian(0.0, stddev);
+                float sum = 2.0 * (g0.x + g0.y + g0.z + g0.w) + g;
+                g0 /= sum;
+                g /= sum;
+
+                float IC = dot(texture2D(iSource, vUv), vec4(1.0, 1.0, 1.0, 0.0))/3.0;
+                vec3 SC = texture2D(sSource, vUv).xyz;
+
+                // four 9-point 1D truncated gaussian convolutions
+                vec4 f = vec4(0.0);
+                f += (vec4(I0(0), S1x(0), S2y(0), S3z(0)) + vec4(I0(7), S1x(7), S2y(3), S3z(3))) * g0.x;
+                f += (vec4(I0(1), S1x(1), S2y(1), S3z(1)) + vec4(I0(6), S1x(6), S2y(2), S3z(2))) * g0.y;
+                f += (vec4(I0(2), S1x(2), S0y(0), S1z(0)) + vec4(I0(5), S1x(5), S0y(7), S1z(7))) * g0.z;
+                f += (vec4(I0(3), S1x(3), S0y(2), S1z(2)) + vec4(I0(4), S1x(4), S0y(5), S1z(5))) * g0.w;
+                f += vec4(IC, SC) * g;
+
+                gl_FragColor = vec4(f);
+
+            }
+        </script>
+        <script type="x-shader/x-vertex" id="gaussianPyramidFragmentShader123">
             uniform sampler2D iSource;
             uniform sampler2D sSource;
 
@@ -335,6 +391,7 @@
                 f += vec4(IC, SC) * g;
 
                 gl_FragColor = vec4(f);
+
             }
         </script>
         <script type="x-shader/x-fragment" id="mccabeFragmentShader">
@@ -352,6 +409,7 @@
             uniform float rate;
             uniform float hystj;
             uniform float hystk;
+            uniform float feed;
 
             // clamp to avoid under/overflow, with a little headroom (highp range is 2^-62 to 2^62)
             vec4 underflowClamp(vec4 x) {
@@ -375,11 +433,10 @@
                 {x, -1, 1}, {y, -1, 1}, Mesh -> Automatic, MeshFunctions -> {#3 &},
                 PlotRange -> {-1, 1}], {k, 0.001, 50.0}, {j, 0.001, 10.0}]
             */
-            float hysteresis(float x, float dx, float j, float k) {
-                //float jx = 2.0 * j * (x - 0.5);
-                float jx = j * x;
-                float exp_jx = 1.0 + expUC(jx);
-                float exp_jxkdx = 1.0 + expUC(jx + k * dx);
+            vec4 hysteresis(vec4 x, vec4 dx, float j, float k) {
+                vec4 jx = j * x;
+                vec4 exp_jx = 1.0 + expUC(jx);
+                vec4 exp_jxkdx = 1.0 + expUC(jx + k * dx);
                 float exp_pk = expUC(k);
                 float exp_nk = expUC(-k);
                 float cothk = (exp_pk + exp_nk)/(exp_pk - exp_nk);
@@ -392,6 +449,26 @@
 
             void main()
             {
+                vec4 one = vec4(1.0);
+
+                vec4 c0 = vec4(0.365, 0.024, 0.259, 0.0);
+                vec4 c1 = vec4(0.200, 0.306, 0.361, 0.0);
+                vec4 c2 = vec4(0.271, 0.698, 0.616, 0.0);
+                vec4 c3 = vec4(0.647, 0.780, 0.498, 0.0);
+                vec4 c4 = vec4(0.937, 0.788, 0.298, 0.0);
+                vec4 c5 = vec4(0.886, 0.478, 0.247, 0.0);
+                vec4 c6 = vec4(0.875, 0.353, 0.286, 0.0);
+                vec4 c7 = vec4(0.918, 0.376, 0.271, 0.0);
+
+                c0 /= dot(c0, one);
+                c1 /= dot(c1, one);
+                c2 /= dot(c2, one);
+                c3 /= dot(c3, one);
+                c4 /= dot(c4, one);
+                c5 /= dot(c5, one);
+                c6 /= dot(c6, one);
+                c7 /= dot(c7, one);
+
                 vec4 i0 = vec4(1.0, 2.0, 3.0, 4.0);
                 vec4 i1 = vec4(5.0, 6.0, 7.0, 8.0);
 
@@ -405,25 +482,32 @@
                 vec4 a0 = scale * pow(i0, ev);
                 vec4 a1 = scale * pow(i1, ev);
 
-                vec4 one = vec4(1.0);
-
                 vec4 b0 = vec4(texture2D(bSource0, vUv).yw, texture2D(bSource1, vUv).yw);
                 vec4 b1 = vec4(texture2D(bSource2, vUv).yw, texture2D(bSource3, vUv).yw);
-                vec4 is = texture2D(iSource, vUv);
+                vec4 iv = texture2D(iSource, vUv);
+                float is = dot(iv, vec4(1.0, 1.0, 1.0, 0.0)) / 3.0;
 
                 // difference of gaussians
-                vec4 dog0 = vec4(is.x - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b0.w);
+                vec4 dog0 = vec4(is   - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b0.w);
                 vec4 dog1 = vec4(b0.w - b1.x, b1.x - b1.y, b1.y - b1.z, b1.z - b1.w);
 
                 // combined softmin and mccabe update rule
                 vec4 q0 = g0 * expUC(- 10.0 * hard * abs(dog0));
                 vec4 q1 = g1 * expUC(- 10.0 * hard * abs(dog1));
-                float n = dot(sigmoid(dog0, sv) * a0 * q0, one) + dot(sigmoid(dog1, sv) * a1 * q1, one);
+                vec4 n0 = sigmoid(dog0, sv) * a0 * q0;
+                vec4 n1 = sigmoid(dog1, sv) * a1 * q1;
+                float n = dot(n0, one) + dot(n1, one);
                 float d = dot(q0, one) + dot(q1, one);
+                vec4 f0 = n0 / d;
+                vec4 f1 = n1 / d;
 
-                float dx = rate * hysteresis(is.x, n/d, hystj, hystk);
-                float final = clamp(is.x + dx, -1.0, 1.0);
-                gl_FragColor = vec4(final);
+                vec4 cf = f0.x * c0 + f0.y * c1 + f0.z * c2 + f0.w * c3
+                        + f1.x * c4 + f1.y * c5 + f1.z * c6 + f1.w * c7;
+
+                vec4 dx = rate * hysteresis(iv, cf, hystj, hystk);
+
+                vec4 final = clamp(feed * iv + dx, -1.0, 1.0);
+                gl_FragColor = final;
 
             }
         </script>

@@ -54,6 +54,7 @@ var Renderer = function(config){
     this.stddev   = config.stddev;
     this.hystj    = config.hystj;
     this.hystk    = config.hystk;
+    this.feed     = config.feed;
     this.blurl    = config.blurl;
 
     this.debug = false;
@@ -75,6 +76,7 @@ var Renderer = function(config){
         stddev:       {type: "f", value: this.stddev},
         hystj:        {type: "f", value: this.hystj},
         hystk:        {type: "f", value: this.hystk},
+        feed:         {type: "f", value: this.feed},
         blurl:        {type: "f", value: this.blurl}
     };
 
@@ -89,6 +91,7 @@ var Renderer = function(config){
         this.mUniforms.hystj.value    = this.hystj;
         this.mUniforms.hystk.value    = this.hystk;
         this.mUniforms.blurl.value    = this.blurl;
+        this.mUniforms.feed.value     = this.feed;
     };
 
     this.init = function()
@@ -129,10 +132,10 @@ var Renderer = function(config){
         this.mccabeMaterial = this.getMaterial('standardVertexShader', 'mccabeFragmentShader');
         this.debugMaterial  = this.getMaterial('standardVertexShader', 'debugFragmentShader');
         this.noiseMaterial  = this.getMaterial('standardVertexShader', 'noiseFragmentShader');
-        this.pass0Material  = this.getMaterial('gaussianPyramidVertexShader0', 'gaussianPyramidFragmentShader');
-        this.pass1Material  = this.getMaterial('gaussianPyramidVertexShader1', 'gaussianPyramidFragmentShader');
-        this.pass2Material  = this.getMaterial('gaussianPyramidVertexShader2', 'gaussianPyramidFragmentShader');
-        this.pass3Material  = this.getMaterial('gaussianPyramidVertexShader3', 'gaussianPyramidFragmentShader');
+        this.pass0Material  = this.getMaterial('gaussianPyramidVertexShader0', 'gaussianPyramidFragmentShader0');
+        this.pass1Material  = this.getMaterial('gaussianPyramidVertexShader1', 'gaussianPyramidFragmentShader123');
+        this.pass2Material  = this.getMaterial('gaussianPyramidVertexShader2', 'gaussianPyramidFragmentShader123');
+        this.pass3Material  = this.getMaterial('gaussianPyramidVertexShader3', 'gaussianPyramidFragmentShader123');
 
         var plane = new THREE.PlaneGeometry(1.0, 1.0);
         this.mScreenQuad = new THREE.Mesh(plane, this.screenMaterial);
@@ -298,14 +301,15 @@ var Renderer = function(config){
 window.onload = function() {
     var renderer = new Renderer({
         hard: 40.0,
-        rate: 25.0,
-        sharp: 1.0,
-        exponent: 1.0,
-        stddev: 3.0,
-        scale: 0.01,
+        rate: 100.0,
+        sharp: 0.4,
+        exponent: 2.0,
+        stddev: 4.0,
+        scale: 0.012,
         hystj: 0.0,
-        hystk: 10.0,
-        blurl: 4.0
+        hystk: 4.0,
+        blurl: 4.0,
+        feed: 0.98
     });
     var gui = new dat.GUI();
 
@@ -317,6 +321,7 @@ window.onload = function() {
     gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
     gui.add(renderer, 'hystj').min(-10.0).max(10.0).step(0.01).name("Hysteresis Scale");
     gui.add(renderer, 'hystk').min(-40.0).max(40.0).step(0.01).name("Hysteresis Delta");
+    gui.add(renderer, 'feed').min(0.9).max(1.1).step(0.001).name("Feedback");
     gui.add(renderer, 'blurl').min(0.0).max(7.0).step(0.01).name("Debug View Ctrl");
     gui.add(renderer, 'toggleDebug').name("Debug View");
     gui.add(renderer, 'resetCounter').name("Reset");
