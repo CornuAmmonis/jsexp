@@ -56,6 +56,7 @@ var Renderer = function(config){
     this.hystk    = config.hystk;
     this.feed     = config.feed;
     this.blurl    = config.blurl;
+    this.sparse   = config.sparse;
 
     this.debug = false;
 
@@ -77,7 +78,8 @@ var Renderer = function(config){
         hystj:        {type: "f", value: this.hystj},
         hystk:        {type: "f", value: this.hystk},
         feed:         {type: "f", value: this.feed},
-        blurl:        {type: "f", value: this.blurl}
+        blurl:        {type: "f", value: this.blurl},
+        sparse:       {type: "f", value: this.sparse}
     };
 
     this.updateUniforms = function()
@@ -92,6 +94,7 @@ var Renderer = function(config){
         this.mUniforms.hystk.value    = this.hystk;
         this.mUniforms.blurl.value    = this.blurl;
         this.mUniforms.feed.value     = this.feed;
+        this.mUniforms.sparse.value   = this.sparse;
     };
 
     this.init = function()
@@ -309,7 +312,8 @@ window.onload = function() {
         hystj: 0.0,
         hystk: 4.0,
         blurl: 4.0,
-        feed: 0.0
+        feed: 0.99,
+        sparse: 0.01
     });
     var gui = new dat.GUI();
 
@@ -321,7 +325,8 @@ window.onload = function() {
     gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
     gui.add(renderer, 'hystj').min(-10.0).max(10.0).step(0.01).name("Hysteresis Scale");
     gui.add(renderer, 'hystk').min(-40.0).max(40.0).step(0.01).name("Hysteresis Delta");
-    gui.add(renderer, 'feed').min(-0.1).max(0.1).step(0.001).name("Sparsify Color");
+    gui.add(renderer, 'sparse').min(-0.1).max(0.1).step(0.001).name("Sparsify Color");
+    gui.add(renderer, 'feed').min(0.95).max(1.05).step(0.001).name("Feedback");
     gui.add(renderer, 'blurl').min(0.0).max(7.0).step(0.01).name("Debug View Ctrl");
     gui.add(renderer, 'toggleDebug').name("Debug View");
     gui.add(renderer, 'resetCounter').name("Reset");
