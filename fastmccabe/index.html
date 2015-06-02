@@ -486,6 +486,7 @@
                 vec4 b1 = vec4(texture2D(bSource2, vUv).yw, texture2D(bSource3, vUv).yw);
                 vec4 iv = texture2D(iSource, vUv);
                 float is = dot(iv, vec4(1.0, 1.0, 1.0, 0.0)) / 3.0;
+                float il = length(iv);
 
                 // difference of gaussians
                 vec4 dog0 = vec4(is   - b0.x, b0.x - b0.y, b0.y - b0.z, b0.z - b0.w);
@@ -506,7 +507,8 @@
 
                 vec4 dx = rate * hysteresis(iv, cf, hystj, hystk);
 
-                vec4 final = clamp(feed * iv + dx, -1.0, 1.0);
+                vec4 to = vec4(2.0, 2.0, 2.0, 0.0);
+                vec4 final = clamp(iv + dx - feed * is * is * is * is * (is * to - iv) , -1.0, 1.0);
                 gl_FragColor = final;
 
             }

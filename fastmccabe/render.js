@@ -309,7 +309,7 @@ window.onload = function() {
         hystj: 0.0,
         hystk: 4.0,
         blurl: 4.0,
-        feed: 0.98
+        feed: 0.0
     });
     var gui = new dat.GUI();
 
@@ -321,7 +321,7 @@ window.onload = function() {
     gui.add(renderer, 'stddev').min(0.0).max(10.0).step(0.01).name("Std Deviation");
     gui.add(renderer, 'hystj').min(-10.0).max(10.0).step(0.01).name("Hysteresis Scale");
     gui.add(renderer, 'hystk').min(-40.0).max(40.0).step(0.01).name("Hysteresis Delta");
-    gui.add(renderer, 'feed').min(0.9).max(1.1).step(0.001).name("Feedback");
+    gui.add(renderer, 'feed').min(-0.1).max(0.1).step(0.001).name("Sparsify Color");
     gui.add(renderer, 'blurl').min(0.0).max(7.0).step(0.01).name("Debug View Ctrl");
     gui.add(renderer, 'toggleDebug').name("Debug View");
     gui.add(renderer, 'resetCounter').name("Reset");
